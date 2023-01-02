@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: 2022 Robin Vobruba <hoijui.quaero@gmail.com>
+#
+# SPDX-License-Identifier: Unlicense
+
+[package]
+name = "cli-utils"
+version = "0.1.0"
+authors = ["Robin Vobruba <hoijui.quaero@gmail.com>"]
+description = """
+    A tiny CLI utilities library,
+    providing functions and constants useful in many CLI tools.
+    """
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/hoijui/cli-utils-rs"
+keywords = ["cli", "ci", "utils"]
+categories = ["command-line-utilities", "text-processing"]
+edition = "2021"
+
+[dependencies]
+#clap = { version = "4.0", features = ["cargo"] }
+#const_format = "0.2"
+# We can not yet use `dotenv` upstream, as long as this PR is unmerged:
+# https://github.com/dotenv-rs/dotenv/pull/78
+# Sadly, the project loks head-less (no active owners/maintainers),
+# see this related issue:
+# https://github.com/dotenv-rs/dotenv/issues/74
+#dotenv = { git = "https://github.com/hoijui/dotenv.git" }
+git-version = "0.3"
+#lazy_static = "1.4"
+#regex = "1.6"
+#thiserror = "1.0"
+#typed-builder = "0.11"
+
+[dev-dependencies]
+#assert_cmd = "2.0"
+#predicates = "2.1"
+#tempfile = "3.3"
