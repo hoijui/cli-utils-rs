@@ -9,6 +9,27 @@ use std::path::Path;
 /// Creates a reader from a string identifier.
 /// Both `None` and `Some("-")` mean stdin.
 ///
+/// # Example
+///
+/// ```rust
+/// # use std::io;
+/// # fn create_input_reader_example() -> io::Result<()> {
+/// let in_file = None as Option<&str>; // reads from stdin
+/// let in_file = Some("-"); // reads from stdin
+/// let in_file = Some("my_dir/my_file.txt"); // reads from file "$CWD/my_dir/my_file.txt"
+/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut buffer = String::new();
+/// loop {
+///     let line_size = reader.read_line(&mut buffer)?;
+///     if line_size == 0 {
+///         break;
+///     }
+///     print!("{}", buffer);
+/// }
+/// # Ok(())
+/// # }
+/// ```
+///
 /// # Errors
 ///
 /// If a file path is specified, and it is not possible to read from it.
@@ -24,6 +45,25 @@ pub fn create_input_reader(ident: Option<&str>) -> io::Result<Box<dyn BufRead>> 
 
 /// Creates a writer from a string identifier.
 /// Both `None` and `Some("-")` mean stdout.
+/// See also: [`write_to_file`]
+///
+/// # Example
+///
+/// ```rust
+/// # use std::io;
+/// # fn create_output_writer_example() -> io::Result<()> {
+/// let lines = vec!["line 1", "line 2", "line 3"];
+/// let out_file = None as Option<&str>; // writes to stdout
+/// let out_file = Some("-"); // writes to stdout
+/// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
+/// let mut writer = cli_utils::create_output_writer(out_file)?;
+/// for line in lines {
+///     writer.write_all(line.as_bytes())?;
+///     writer.write_all(b"\n")?;
+/// }
+/// # Ok(())
+/// # }
+/// ```
 ///
 /// # Errors
 ///
@@ -45,6 +85,17 @@ pub fn create_output_writer(ident: Option<&str>) -> io::Result<Box<dyn Write>> {
 /// * "\r\n" as used in DOS and Windows, or
 /// * "\n" as used in most of the rest of the universe, or
 /// * "" if none of the above is present.
+///
+/// # Examples
+///
+/// ```rust
+/// # fn remove_eol_example() {
+/// let mut line = String::from("my lines text\n");
+/// let line_clean = String::from("my lines text");
+/// cli_utils::remove_eol(&mut line);
+/// assert_eq!(line, line_clean);
+/// # }
+/// ```
 pub fn remove_eol(line: &mut String) {
     if line.ends_with('\n') {
         line.pop();
@@ -100,6 +151,21 @@ pub fn lines_iterator(
 
 /// Writes a list of strings to a file;
 /// one per line.
+/// See also: [`create_output_writer`]
+///
+/// # Example
+///
+/// ```rust
+/// # use std::io;
+/// # fn write_to_file_example() -> io::Result<()> {
+/// let lines = vec!["line 1", "line 2", "line 3"];
+/// let out_file = None as Option<&str>; // writes to stdout
+/// let out_file = Some("-"); // writes to stdout
+/// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
+/// cli_utils::write_to_file(lines, out_file)?;
+/// # Ok(())
+/// # }
+/// ```
 ///
 /// # Errors
 ///
