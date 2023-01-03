@@ -104,11 +104,11 @@ pub fn lines_iterator(
 /// # Errors
 ///
 /// If writing to `destination` failed.
-pub fn write_to_file(lines: Vec<String>, destination: Option<&str>) -> io::Result<()> {
+pub fn write_to_file<L: AsRef<str>>(lines: Vec<L>, destination: Option<&str>) -> io::Result<()> {
     let mut writer = crate::tools::create_output_writer(destination)?;
 
     for line in lines {
-        writer.write_all(line.as_bytes())?;
+        writer.write_all(line.as_ref().as_bytes())?;
         writer.write_all(b"\n")?;
     }
 
