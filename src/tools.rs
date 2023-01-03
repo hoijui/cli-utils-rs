@@ -183,3 +183,136 @@ pub fn write_to_file<L: AsRef<str>>(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_remove_eol_check(input: &str, expected: &str) {
+        let mut actual = String::from(input);
+        remove_eol(&mut actual);
+        assert_eq!(expected, actual);
+    }
+
+    macro_rules! test_remove_eol {
+        ($($name:ident: { input: $input:expr, expected: $expected:expr, },)*) => {
+        $(
+            #[test]
+            fn $name() {
+                // let (input, expected) = $pair;
+                test_remove_eol_check($input, $expected);
+            }
+        )*
+        }
+    }
+
+    test_remove_eol! {
+        test_remove_eol_simple_none: {
+            input: "my lines text",
+            expected: "my lines text",
+        },
+        test_remove_eol_simple_nl: {
+            input: "my lines text\n",
+            expected: "my lines text",
+        },
+        test_remove_eol_simple_crnl: {
+            input: "my lines text\r\n",
+            expected: "my lines text",
+        },
+        test_remove_eol_simple_nlcr: {
+            input: "my lines text\n\r",
+            expected: "my lines text\n\r",
+        },
+        test_remove_eol_simple_cr: {
+            input: "my lines text\r",
+            expected: "my lines text\r",
+        },
+    }
+
+    fn test_lines_iterator_check(
+        input: &str,
+        expected: &[&str],
+        strip_eol: bool,
+    ) -> io::Result<()> {
+        let mut input = input.as_bytes();
+        let actual = lines_iterator(&mut input, strip_eol).collect::<io::Result<Vec<_>>>()?;
+        assert_eq!(expected, &actual);
+        Ok(())
+    }
+
+    macro_rules! test_lines_iterator {
+        ($($name:ident: { input: $input:expr, expected: $expected:expr, },)*) => {
+        $(
+            #[test]
+            fn $name() -> io::Result<()> {
+                test_lines_iterator_check($input, $expected, false)
+            }
+        )*
+        }
+    }
+
+    test_lines_iterator! {
+        test_lines_iterator_simple_1: {
+            input: "line 1\nline 2\nline 3",
+            expected: &["line 1\n", "line 2\n", "line 3"],
+        },
+        test_lines_iterator_simple_2: {
+            input: "line 1\nline 2\nline 3\n",
+            expected: &["line 1\n", "line 2\n", "line 3\n"],
+        },
+        test_lines_iterator_windows_1: {
+            input: "line 1\r\nline 2\r\nline 3",
+            expected: &["line 1\r\n", "line 2\r\n", "line 3"],
+        },
+        test_lines_iterator_windows_2: {
+            input: "line 1\r\nline 2\r\nline 3\r\n",
+            expected: &["line 1\r\n", "line 2\r\n", "line 3\r\n"],
+        },
+        test_lines_iterator_mixed_1: {
+            input: "line 1\nline 2\r\nline 3",
+            expected: &["line 1\n", "line 2\r\n", "line 3"],
+        },
+        test_lines_iterator_mixed_2: {
+            input: "line 1\r\nline 2\nline 3",
+            expected: &["line 1\r\n", "line 2\n", "line 3"],
+        },
+        test_lines_iterator_mixed_3: {
+            input: "line 1\nline 2\r\nline 3\n",
+            expected: &["line 1\n", "line 2\r\n", "line 3\n"],
+        },
+        test_lines_iterator_mixed_4: {
+            input: "line 1\r\nline 2\nline 3\r\n",
+            expected: &["line 1\r\n", "line 2\n", "line 3\r\n"],
+        },
+    }
+
+    macro_rules! test_lines_iterator_strip {
+        ($($name:ident: $input:expr,)*) => {
+        $(
+            #[test]
+            fn $name() -> io::Result<()> {
+                test_lines_iterator_check($input, &["line 1", "line 2", "line 3"], true)
+            }
+        )*
+        }
+    }
+
+    test_lines_iterator_strip! {
+        test_lines_iterator_strip_simple_1:
+            "line 1\nline 2\nline 3",
+        test_lines_iterator_strip_simple_2:
+            "line 1\nline 2\nline 3\n",
+        test_lines_iterator_strip_windows_1:
+            "line 1\r\nline 2\r\nline 3",
+        test_lines_iterator_strip_windows_2:
+            "line 1\r\nline 2\r\nline 3\r\n",
+        test_lines_iterator_strip_mixed_1:
+            "line 1\nline 2\r\nline 3",
+        test_lines_iterator_strip_mixed_2:
+            "line 1\r\nline 2\nline 3",
+        test_lines_iterator_strip_mixed_3:
+            "line 1\nline 2\r\nline 3\n",
+        test_lines_iterator_strip_mixed_4:
+            "line 1\r\nline 2\nline 3\r\n",
+    }
+}
