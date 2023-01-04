@@ -109,7 +109,7 @@ pub fn create_input_reader<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<d
 pub fn create_output_writer<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<dyn Write>> {
     if let Some(file_path) = ident {
         if file_path.as_ref() != STREAM_PATH.as_path() {
-            let file = File::open(file_path)?;
+            let file = File::create(file_path)?;
             return Ok(Box::new(file) as Box<dyn Write>);
         }
     }
