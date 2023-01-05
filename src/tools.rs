@@ -11,6 +11,19 @@ use std::str::FromStr;
 pub static STREAM_PATH: Lazy<PathBuf> =
     Lazy::new(|| PathBuf::from_str("-").expect("This failing should be impossilbe!"));
 
+/// Figures out whether the given input or output specifier
+/// indicates a standard stream (stdin or stdout),
+/// or rather a file-path.
+/// Both `None` and `Some("-")` mean stdin/stdout.
+pub fn denotes_std_stream<P: AsRef<Path>>(ident: &Option<P>) -> bool {
+    if let Some(file_path) = ident {
+        if file_path.as_ref() != STREAM_PATH.as_path() {
+            return false;
+        }
+    }
+    true
+}
+
 /// Creates a reader from a string identifier.
 /// Both `None` and `Some("-")` mean stdin.
 ///
@@ -23,23 +36,23 @@ pub static STREAM_PATH: Lazy<PathBuf> =
 /// # fn create_input_reader_example() -> io::Result<()> {
 ///
 /// let in_file = None as Option<&str>; // reads from stdin
-/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut reader = cli_utils::create_input_reader(&in_file)?;
 ///
 /// let in_file = Some("-"); // reads from stdin
-/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut reader = cli_utils::create_input_reader(&in_file)?;
 ///
 /// let in_file = Some("my_dir/my_file.txt"); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut reader = cli_utils::create_input_reader(&in_file)?;
 ///
 /// let in_file = Some("my_dir/my_file.txt".to_string()); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut reader = cli_utils::create_input_reader(&in_file)?;
 ///
 /// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossilbe!");
 /// let in_file = Some(path_buf.as_path()); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut reader = cli_utils::create_input_reader(&in_file)?;
 ///
 /// let in_file = Some(path_buf); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut reader = cli_utils::create_input_reader(&in_file)?;
 ///
 /// let mut buffer = String::new();
 /// loop {
@@ -56,14 +69,58 @@ pub static STREAM_PATH: Lazy<PathBuf> =
 /// # Errors
 ///
 /// If a file path is specified, and it is not possible to read from it.
-pub fn create_input_reader<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<dyn BufRead>> {
-    if let Some(file_path) = ident {
-        if file_path.as_ref() != STREAM_PATH.as_path() {
-            let file = File::open(file_path)?;
-            return Ok(Box::new(BufReader::new(file)));
-        }
+pub fn create_input_reader<P: AsRef<Path>>(ident: &Option<P>) -> io::Result<Box<dyn BufRead>> {
+    if denotes_std_stream(ident) {
+        Ok(create_input_reader_stdin())
+    } else {
+        create_input_reader_file(ident.as_ref().expect("There should be a file path here!"))
     }
-    Ok(Box::new(BufReader::new(io::stdin())))
+}
+
+/// Creates a reader from a file-path.
+/// See [`create_input_reader`].
+///
+/// # Errors
+///
+/// If a file path is specified, and it is not possible to read from it.
+pub fn create_input_reader_file<P: AsRef<Path>>(file_path: P) -> io::Result<Box<dyn BufRead>> {
+    let file = File::open(file_path)?;
+    Ok(Box::new(BufReader::new(file)))
+}
+
+/// Creates a reader that reads from stdin.
+/// See [`create_input_reader`].
+#[must_use]
+pub fn create_input_reader_stdin() -> Box<dyn BufRead> {
+    Box::new(BufReader::new(io::stdin()))
+}
+
+/// Returns `std_stream_name` if that is denoted,
+/// "file: '<FILE-NAME>'" otherwise.
+/// This might be useful for logging.
+fn create_stream_ident_description<P: AsRef<Path>>(
+    ident: &Option<P>,
+    std_stream_name: &str,
+) -> String {
+    if denotes_std_stream(ident) {
+        String::from(std_stream_name)
+    } else {
+        format!(
+            "file: '{}'",
+            ident
+                .as_ref()
+                .expect("There should be a file path here!")
+                .as_ref()
+                .display()
+        )
+    }
+}
+
+/// Returns "stdin" if that is denoted,
+/// "file: '<FILE-NAME>'" otherwise.
+/// This might be useful for logging.
+pub fn create_input_reader_description<P: AsRef<Path>>(ident: &Option<P>) -> String {
+    create_stream_ident_description(ident, "stdin")
 }
 
 /// Creates a writer from a string identifier.
@@ -80,20 +137,20 @@ pub fn create_input_reader<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<d
 /// let lines = vec!["line 1", "line 2", "line 3"];
 ///
 /// let out_file = None as Option<&str>; // writes to stdout
-/// let mut writer = cli_utils::create_output_writer(out_file)?;
+/// let mut writer = cli_utils::create_output_writer(&out_file)?;
 ///
 /// let out_file = Some("-"); // writes to stdout
-/// let mut writer = cli_utils::create_output_writer(out_file)?;
+/// let mut writer = cli_utils::create_output_writer(&out_file)?;
 ///
 /// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
-/// let mut writer = cli_utils::create_output_writer(out_file)?;
+/// let mut writer = cli_utils::create_output_writer(&out_file)?;
 ///
 /// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossilbe!");
 /// let out_file = Some(path_buf.as_path()); // writes to file "$CWD/my_dir/my_file.txt"
-/// let mut writer = cli_utils::create_output_writer(out_file)?;
+/// let mut writer = cli_utils::create_output_writer(&out_file)?;
 ///
 /// let out_file = Some(path_buf); // writes to file "$CWD/my_dir/my_file.txt"
-/// let mut writer = cli_utils::create_output_writer(out_file)?;
+/// let mut writer = cli_utils::create_output_writer(&out_file)?;
 ///
 /// for line in lines {
 ///     writer.write_all(line.as_bytes())?;
@@ -106,14 +163,37 @@ pub fn create_input_reader<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<d
 /// # Errors
 ///
 /// If a file path is specified, and it is not possible to write to it.
-pub fn create_output_writer<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<dyn Write>> {
-    if let Some(file_path) = ident {
-        if file_path.as_ref() != STREAM_PATH.as_path() {
-            let file = File::create(file_path)?;
-            return Ok(Box::new(file) as Box<dyn Write>);
-        }
+pub fn create_output_writer<P: AsRef<Path>>(ident: &Option<P>) -> io::Result<Box<dyn Write>> {
+    if denotes_std_stream(ident) {
+        Ok(create_output_writer_stdout())
+    } else {
+        create_output_writer_file(ident.as_ref().expect("There should be a file path here!"))
     }
-    Ok(Box::new(io::stdout()) as Box<dyn Write>)
+}
+
+/// Creates a writer that writes to a file.
+/// See [`create_output_writer`].
+///
+/// # Errors
+///
+/// If a file path is specified, and it is not possible to write to it.
+pub fn create_output_writer_file<P: AsRef<Path>>(file_path: P) -> io::Result<Box<dyn Write>> {
+    let file = File::create(file_path)?;
+    Ok(Box::new(file) as Box<dyn Write>)
+}
+
+/// Creates a writer that writes to stdout.
+/// See [`create_output_writer`].
+#[must_use]
+pub fn create_output_writer_stdout() -> Box<dyn Write> {
+    Box::new(io::stdout())
+}
+
+/// Returns "stdout" if that is denoted,
+/// "file: '<FILE-NAME>'" otherwise.
+/// This might be useful for logging.
+pub fn create_output_writer_description<P: AsRef<Path>>(ident: &Option<P>) -> String {
+    create_stream_ident_description(ident, "stdout")
 }
 
 /// Removes an EOL indicator from the end of the given string,
@@ -200,20 +280,20 @@ pub fn lines_iterator(
 /// let lines = vec!["line 1", "line 2", "line 3"];
 ///
 /// let out_file = None as Option<&str>; // writes to stdout
-/// cli_utils::write_to_file(&lines, out_file)?;
+/// cli_utils::write_to_file(&lines, &out_file)?;
 ///
 /// let out_file = Some("-"); // writes to stdout
-/// cli_utils::write_to_file(&lines, out_file)?;
+/// cli_utils::write_to_file(&lines, &out_file)?;
 ///
 /// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
-/// cli_utils::write_to_file(&lines, out_file)?;
+/// cli_utils::write_to_file(&lines, &out_file)?;
 ///
 /// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossilbe!");
 /// let out_file = Some(path_buf.as_path()); // writes to file "$CWD/my_dir/my_file.txt"
-/// cli_utils::write_to_file(&lines, out_file)?;
+/// cli_utils::write_to_file(&lines, &out_file)?;
 ///
 /// let out_file = Some(path_buf); // writes to file "$CWD/my_dir/my_file.txt"
-/// cli_utils::write_to_file(&lines, out_file)?;
+/// cli_utils::write_to_file(&lines, &out_file)?;
 /// # Ok(())
 /// # }
 /// ```
@@ -223,7 +303,7 @@ pub fn lines_iterator(
 /// If writing to `destination` failed.
 pub fn write_to_file<L: AsRef<str>, P: AsRef<Path>>(
     lines: impl IntoIterator<Item = L>,
-    destination: Option<P>,
+    destination: &Option<P>,
 ) -> io::Result<()> {
     let mut writer = crate::tools::create_output_writer(destination)?;
 
