@@ -38,6 +38,9 @@ pub fn denotes_std_stream<P: AsRef<Path>>(ident: &Option<P>) -> bool {
 /// let in_file = None as Option<&str>; // reads from stdin
 /// let mut reader = cli_utils::create_input_reader(&in_file)?;
 ///
+/// let in_file = None as Option<&String>; // reads from stdin
+/// let mut reader = cli_utils::create_input_reader(&in_file)?;
+///
 /// let in_file = Some("-"); // reads from stdin
 /// let mut reader = cli_utils::create_input_reader(&in_file)?;
 ///
