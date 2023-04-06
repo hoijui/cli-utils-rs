@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "cli-utils"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "git-version",
  "once_cell",
