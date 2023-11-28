@@ -372,6 +372,22 @@ mod tests {
         },
     }
 
+    #[test]
+    fn test_denotes_std_stream() {
+        assert!(denotes_std_stream::<&str>(None));
+        assert!(denotes_std_stream::<String>(None));
+        assert!(denotes_std_stream::<PathBuf>(None));
+        assert!(denotes_std_stream::<&Path>(None));
+        assert!(denotes_std_stream(Some("-")));
+        assert!(denotes_std_stream(Some("-".to_string())));
+        assert!(denotes_std_stream(Some(PathBuf::from("-"))));
+        assert!(denotes_std_stream(Some(PathBuf::from("-").as_path())));
+        assert!(!denotes_std_stream(Some("/pth/x")));
+        assert!(!denotes_std_stream(Some("/pth/x".to_string())));
+        assert!(!denotes_std_stream(Some(PathBuf::from("/pth/x"))));
+        assert!(!denotes_std_stream(Some(PathBuf::from("/pth/x").as_path())));
+    }
+
     fn test_lines_iterator_check(
         input: &str,
         expected: &[&str],
