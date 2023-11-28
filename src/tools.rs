@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use once_cell::sync::Lazy;
+use std::borrow::Cow;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -112,25 +113,17 @@ pub fn create_input_reader_stdin() -> Box<dyn BufRead> {
 /// This might be useful for logging.
 fn create_stream_ident_description<P: AsRef<Path>>(
     ident: Option<P>,
-    std_stream_name: &str,
-) -> String {
-    if denotes_std_stream(ident.as_ref()) {
-        String::from(std_stream_name)
-    } else {
-        format!(
-            "file: '{}'",
-            ident
-                .expect("There should be a file path here!")
-                .as_ref()
-                .display()
-        )
-    }
+    std_stream_name: &'_ str,
+) -> Cow<'_, str> {
+    ident_to_path(ident).map_or(Cow::Borrowed(std_stream_name), |path| {
+        Cow::Owned(format!("file: '{}'", path.as_ref().display()))
+    })
 }
 
 /// Returns "stdin" if that is denoted,
 /// "file: '<FILE-NAME>'" otherwise.
 /// This might be useful for logging.
-pub fn create_input_reader_description<P: AsRef<Path>>(ident: Option<P>) -> String {
+pub fn create_input_reader_description<P: AsRef<Path>>(ident: Option<P>) -> Cow<'static, str> {
     create_stream_ident_description(ident, "stdin")
 }
 
@@ -203,7 +196,7 @@ pub fn create_output_writer_stdout() -> Box<dyn Write> {
 /// Returns "stdout" if that is denoted,
 /// "file: '<FILE-NAME>'" otherwise.
 /// This might be useful for logging.
-pub fn create_output_writer_description<P: AsRef<Path>>(ident: Option<P>) -> String {
+pub fn create_output_writer_description<P: AsRef<Path>>(ident: Option<P>) -> Cow<'static, str> {
     create_stream_ident_description(ident, "stdout")
 }
 
