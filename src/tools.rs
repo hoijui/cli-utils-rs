@@ -373,6 +373,31 @@ mod tests {
     }
 
     #[test]
+    fn test_ident_to_path() {
+        assert_eq!(ident_to_path::<&str>(None), None);
+        assert_eq!(ident_to_path::<String>(None), None);
+        assert_eq!(ident_to_path::<PathBuf>(None), None);
+        assert_eq!(ident_to_path::<&Path>(None), None);
+        assert_eq!(ident_to_path(Some("-")), None);
+        assert_eq!(ident_to_path(Some("-".to_string())), None);
+        assert_eq!(ident_to_path(Some(PathBuf::from("-"))), None);
+        assert_eq!(ident_to_path(Some(PathBuf::from("-").as_path())), None);
+        assert_eq!(ident_to_path(Some("/pth/x")), Some("/pth/x"));
+        assert_eq!(
+            ident_to_path(Some("/pth/x".to_string())),
+            Some("/pth/x".to_string())
+        );
+        assert_eq!(
+            ident_to_path(Some(PathBuf::from("/pth/x"))),
+            Some(PathBuf::from("/pth/x"))
+        );
+        assert_eq!(
+            ident_to_path(Some(PathBuf::from("/pth/x").as_path())),
+            Some(PathBuf::from("/pth/x").as_path())
+        );
+    }
+
+    #[test]
     fn test_denotes_std_stream() {
         assert!(denotes_std_stream::<&str>(None));
         assert!(denotes_std_stream::<String>(None));
