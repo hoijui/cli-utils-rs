@@ -43,7 +43,7 @@ pub fn denotes_std_stream<P: AsRef<Path>>(ident: Option<P>) -> bool {
 /// # use std::io;
 /// # use std::path::PathBuf;
 /// # use std::str::FromStr;
-/// use cli_utils::create_input_reader;
+/// use cli_utils_hoijui::create_input_reader;
 ///
 /// # fn create_input_reader_example() -> io::Result<()> {
 ///
@@ -138,7 +138,7 @@ pub fn create_input_reader_description<P: AsRef<Path>>(ident: Option<P>) -> Cow<
 /// # use std::io;
 /// # use std::path::PathBuf;
 /// # use std::str::FromStr;
-/// use cli_utils::create_output_writer;
+/// use cli_utils_hoijui::create_output_writer;
 ///
 /// # fn create_output_writer_example() -> io::Result<()> {
 /// let lines = vec!["line 1", "line 2", "line 3"];
@@ -212,7 +212,7 @@ pub fn create_output_writer_description<P: AsRef<Path>>(ident: Option<P>) -> Cow
 /// # Examples
 ///
 /// ```rust
-/// use cli_utils::remove_eol;
+/// use cli_utils_hoijui::remove_eol;
 ///
 /// # fn remove_eol_example() {
 /// let mut line = String::from("my lines text\n");
@@ -237,7 +237,7 @@ pub fn remove_eol(line: &mut String) {
 ///
 /// ```rust
 /// # use std::io;
-/// use cli_utils::lines_iterator;
+/// use cli_utils_hoijui::lines_iterator;
 ///
 /// # fn lines_iterator_example(reader: &mut impl io::BufRead) -> io::Result<()> {
 ///     for line in lines_iterator(reader, true) {
@@ -286,7 +286,7 @@ pub fn lines_iterator(
 /// # use std::io;
 /// # use std::path::PathBuf;
 /// # use std::str::FromStr;
-/// use cli_utils::write_to_file;
+/// use cli_utils_hoijui::write_to_file;
 ///
 /// # fn write_to_file_example() -> io::Result<()> {
 /// let lines = vec!["line 1", "line 2", "line 3"];
