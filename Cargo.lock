@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "cli_utils_hoijui"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "git-version",
  "once_cell",
