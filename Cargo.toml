@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Unlicense
 
 [package]
-name = "cli-utils"
+name = "cli_utils"
 version = "0.5.0"
 license = "AGPL-3.0-or-later"
 authors = ["Robin Vobruba <hoijui.quaero@gmail.com>"]
