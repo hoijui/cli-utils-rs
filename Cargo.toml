@@ -39,5 +39,4 @@ print_stdout = "warn"
 print_stderr = "warn"
 
 [dependencies]
-git-version = "0.3"
 once_cell = "1.18"
