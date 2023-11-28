@@ -4,7 +4,7 @@
 
 [package]
 name = "cli_utils_hoijui"
-version = "0.6.1"
+version = "0.6.2"
 license = "AGPL-3.0-or-later"
 authors = ["Robin Vobruba <hoijui.quaero@gmail.com>"]
 description = """
