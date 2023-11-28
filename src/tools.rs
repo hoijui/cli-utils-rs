@@ -83,11 +83,10 @@ pub fn denotes_std_stream<P: AsRef<Path>>(ident: Option<P>) -> bool {
 ///
 /// If a file path is specified, and it is not possible to read from it.
 pub fn create_input_reader<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<dyn BufRead>> {
-    if denotes_std_stream(ident.as_ref()) {
-        Ok(create_input_reader_stdin())
-    } else {
-        create_input_reader_file(ident.expect("There should be a file path here!"))
-    }
+    ident_to_path(ident).map_or_else(
+        || Ok(create_input_reader_stdin()),
+        |path| create_input_reader_file(path),
+    )
 }
 
 /// Creates a reader from a file-path.
@@ -168,11 +167,10 @@ pub fn create_input_reader_description<P: AsRef<Path>>(ident: Option<P>) -> Cow<
 ///
 /// If a file path is specified, and it is not possible to write to it.
 pub fn create_output_writer<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<dyn Write>> {
-    if denotes_std_stream(ident.as_ref()) {
-        Ok(create_output_writer_stdout())
-    } else {
-        create_output_writer_file(ident.expect("There should be a file path here!"))
-    }
+    ident_to_path(ident).map_or_else(
+        || Ok(create_output_writer_stdout()),
+        |path| create_output_writer_file(path),
+    )
 }
 
 /// Creates a writer that writes to a file.
