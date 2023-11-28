@@ -43,29 +43,31 @@ pub fn denotes_std_stream<P: AsRef<Path>>(ident: Option<P>) -> bool {
 /// # use std::io;
 /// # use std::path::PathBuf;
 /// # use std::str::FromStr;
+/// use cli_utils::create_input_reader;
+///
 /// # fn create_input_reader_example() -> io::Result<()> {
 ///
 /// let in_file = None as Option<&str>; // reads from stdin
-/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut reader = create_input_reader(in_file)?;
 ///
 /// let in_file = None as Option<&String>; // reads from stdin
-/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut reader = create_input_reader(in_file)?;
 ///
 /// let in_file = Some("-"); // reads from stdin
-/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut reader = create_input_reader(in_file)?;
 ///
 /// let in_file = Some("my_dir/my_file.txt"); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut reader = create_input_reader(in_file)?;
 ///
 /// let in_file = Some("my_dir/my_file.txt".to_string()); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut reader = create_input_reader(in_file)?;
 ///
 /// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossilbe!");
 /// let in_file = Some(path_buf.as_path()); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut reader = create_input_reader(in_file)?;
 ///
 /// let in_file = Some(path_buf); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = cli_utils::create_input_reader(in_file)?;
+/// let mut reader = create_input_reader(in_file)?;
 ///
 /// let mut buffer = String::new();
 /// loop {
@@ -136,24 +138,26 @@ pub fn create_input_reader_description<P: AsRef<Path>>(ident: Option<P>) -> Cow<
 /// # use std::io;
 /// # use std::path::PathBuf;
 /// # use std::str::FromStr;
+/// use cli_utils::create_output_writer;
+///
 /// # fn create_output_writer_example() -> io::Result<()> {
 /// let lines = vec!["line 1", "line 2", "line 3"];
 ///
 /// let out_file = None as Option<&str>; // writes to stdout
-/// let mut writer = cli_utils::create_output_writer(out_file)?;
+/// let mut writer = create_output_writer(out_file)?;
 ///
 /// let out_file = Some("-"); // writes to stdout
-/// let mut writer = cli_utils::create_output_writer(out_file)?;
+/// let mut writer = create_output_writer(out_file)?;
 ///
 /// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
-/// let mut writer = cli_utils::create_output_writer(out_file)?;
+/// let mut writer = create_output_writer(out_file)?;
 ///
 /// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossilbe!");
 /// let out_file = Some(path_buf.as_path()); // writes to file "$CWD/my_dir/my_file.txt"
-/// let mut writer = cli_utils::create_output_writer(out_file)?;
+/// let mut writer = create_output_writer(out_file)?;
 ///
 /// let out_file = Some(path_buf); // writes to file "$CWD/my_dir/my_file.txt"
-/// let mut writer = cli_utils::create_output_writer(out_file)?;
+/// let mut writer = create_output_writer(out_file)?;
 ///
 /// for line in lines {
 ///     writer.write_all(line.as_bytes())?;
@@ -208,10 +212,12 @@ pub fn create_output_writer_description<P: AsRef<Path>>(ident: Option<P>) -> Cow
 /// # Examples
 ///
 /// ```rust
+/// use cli_utils::remove_eol;
+///
 /// # fn remove_eol_example() {
 /// let mut line = String::from("my lines text\n");
 /// let line_clean = String::from("my lines text");
-/// cli_utils::remove_eol(&mut line);
+/// remove_eol(&mut line);
 /// assert_eq!(line, line_clean);
 /// # }
 /// ```
@@ -231,12 +237,14 @@ pub fn remove_eol(line: &mut String) {
 ///
 /// ```rust
 /// # use std::io;
-/// fn lines_iterator_example(reader: &mut impl io::BufRead) -> io::Result<()> {
-///     for line in cli_utils::lines_iterator(reader, true) {
+/// use cli_utils::lines_iterator;
+///
+/// # fn lines_iterator_example(reader: &mut impl io::BufRead) -> io::Result<()> {
+///     for line in lines_iterator(reader, true) {
 ///         println!("{}", &line?)
 ///     }
-///     Ok(())
-/// }
+/// #     Ok(())
+/// # }
 /// ```
 pub fn lines_iterator(
     reader: &mut impl BufRead,
@@ -278,24 +286,26 @@ pub fn lines_iterator(
 /// # use std::io;
 /// # use std::path::PathBuf;
 /// # use std::str::FromStr;
+/// use cli_utils::write_to_file;
+///
 /// # fn write_to_file_example() -> io::Result<()> {
 /// let lines = vec!["line 1", "line 2", "line 3"];
 ///
 /// let out_file = None as Option<&str>; // writes to stdout
-/// cli_utils::write_to_file(&lines, out_file)?;
+/// write_to_file(&lines, out_file)?;
 ///
 /// let out_file = Some("-"); // writes to stdout
-/// cli_utils::write_to_file(&lines, out_file)?;
+/// write_to_file(&lines, out_file)?;
 ///
 /// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
-/// cli_utils::write_to_file(&lines, out_file)?;
+/// write_to_file(&lines, out_file)?;
 ///
 /// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossilbe!");
 /// let out_file = Some(path_buf.as_path()); // writes to file "$CWD/my_dir/my_file.txt"
-/// cli_utils::write_to_file(&lines, out_file)?;
+/// write_to_file(&lines, out_file)?;
 ///
 /// let out_file = Some(path_buf); // writes to file "$CWD/my_dir/my_file.txt"
-/// cli_utils::write_to_file(&lines, out_file)?;
+/// write_to_file(&lines, out_file)?;
 /// # Ok(())
 /// # }
 /// ```
