@@ -1,19 +1,21 @@
-# SPDX-FileCopyrightText: 2022 Robin Vobruba <hoijui.quaero@gmail.com>
+# SPDX-FileCopyrightText: 2022 - 2023 Robin Vobruba <hoijui.quaero@gmail.com>
 #
 # SPDX-License-Identifier: Unlicense
 
 [package]
 name = "cli-utils"
 version = "0.5.0"
+license = "AGPL-3.0-or-later"
 authors = ["Robin Vobruba <hoijui.quaero@gmail.com>"]
 description = """
     A tiny CLI utilities library,
     providing functions and constants useful in many CLI tools.
     """
-license = "AGPL-3.0-or-later"
 repository = "https://github.com/hoijui/cli-utils-rs"
-keywords = ["cli", "ci", "utils"]
+homepage = "https://github.com/hoijui/cli-utils-rs"
+keywords = ["cli", "utility"]
 categories = ["command-line-utilities", "text-processing"]
+readme = "README.md"
 edition = "2021"
 
 [lints.rust]
