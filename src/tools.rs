@@ -14,14 +14,23 @@ pub static STREAM_PATH: Lazy<PathBuf> =
 /// Figures out whether the given input or output specifier
 /// indicates a standard stream (stdin or stdout),
 /// or rather a file-path.
-/// Both `None` and `Some("-")` mean stdin/stdout.
-pub fn denotes_std_stream<P: AsRef<Path>>(ident: Option<P>) -> bool {
-    if let Some(file_path) = ident {
+/// Both `None` and `Some("-")` mean stdin/stdout,
+/// which results in a return value of `None`.
+fn ident_to_path<P: AsRef<Path>>(ident: Option<P>) -> Option<P> {
+    if let Some(file_path) = ident.as_ref() {
         if file_path.as_ref() != STREAM_PATH.as_path() {
-            return false;
+            return None;
         }
     }
-    true
+    ident
+}
+
+/// Figures out whether the given input or output specifier
+/// indicates a standard stream (stdin or stdout),
+/// or rather a file-path.
+/// Both `None` and `Some("-")` mean stdin/stdout.
+pub fn denotes_std_stream<P: AsRef<Path>>(ident: Option<P>) -> bool {
+    ident_to_path(ident).is_none()
 }
 
 /// Creates a reader from a string identifier.
