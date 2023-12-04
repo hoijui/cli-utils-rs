@@ -12,6 +12,15 @@ SPDX-License-Identifier: CC0-1.0
 [![REUSE status](
     https://api.reuse.software/badge/github.com/hoijui/cli-utils-rs)](
     https://api.reuse.software/info/github.com/hoijui/cli-utils-rs)
+[![crates.io](
+    https://img.shields.io/crates/v/cli_utils_hoijui.svg)](
+    https://crates.io/crates/cli_utils_hoijui)
+[![Docs](
+    https://docs.rs/cli_utils_hoijui/badge.svg)](
+    https://docs.rs/cli_utils_hoijui)
+[![dependency status](
+    https://deps.rs/repo/github/hoijui/cli-utils-rs/status.svg)](
+    https://deps.rs/repo/github/hoijui/cli-utils-rs)
 
 A tiny CLI utilities library,
 providing functions and constants useful in many CLI tools.
