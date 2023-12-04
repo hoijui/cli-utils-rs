@@ -122,7 +122,7 @@ fn create_stream_ident_description<P: AsRef<Path>>(
 }
 
 /// Returns "stdin" if that is denoted,
-/// "file: '<FILE-NAME>'" otherwise.
+/// `file: '<FILE-NAME>'` otherwise.
 /// This might be useful for logging.
 pub fn create_input_reader_description<P: AsRef<Path>>(ident: Option<P>) -> Cow<'static, str> {
     create_stream_ident_description(ident, "stdin")
@@ -196,7 +196,7 @@ pub fn create_output_writer_stdout() -> Box<dyn Write> {
 }
 
 /// Returns "stdout" if that is denoted,
-/// "file: '<FILE-NAME>'" otherwise.
+/// `file: '<FILE-NAME>'` otherwise.
 /// This might be useful for logging.
 pub fn create_output_writer_description<P: AsRef<Path>>(ident: Option<P>) -> Cow<'static, str> {
     create_stream_ident_description(ident, "stdout")
