@@ -24,6 +24,9 @@ SPDX-License-Identifier: CC0-1.0
 [![Dependency Status](
     https://deps.rs/repo/github/hoijui/cli-utils-rs/status.svg)](
     https://deps.rs/repo/github/hoijui/cli-utils-rs)
+[![Build Status](
+    https://github.com/hoijui/cli-utils-rs/workflows/build/badge.svg)](
+    https://github.com/hoijui/cli-utils-rs/actions)
 
 A tiny CLI utilities library,
 providing functions and constants useful in many CLI tools.
