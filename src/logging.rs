@@ -2,6 +2,34 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+//! This module provides a simple way to initialize logging,
+//! and to later change the log level of the application.
+//!
+//! # Example
+//!
+//! ```rust
+//! use cli_utils::BoxResult;
+//! use cli_utils::logging;
+//!
+//! #[tokio::main]
+//! async fn main() -> BoxResult<()> {
+//!     let log_reload_handle = logging::setup(clap::crate_name!())?;
+//!
+//!     let cli_args = cli::parse()?;
+//!
+//!     if cli_args.verbose {
+//!         logging::set_log_level(&log_reload_handle, LevelFilter::DEBUG)?;
+//!     } else if cli_args.quiet {
+//!         logging::set_log_level(&log_reload_handle, LevelFilter::WARN)?;
+//!     } else {
+//!         logging::set_log_level(&log_reload_handle, LevelFilter::INFO)?;
+//!     }
+//!     crate::process(&cli_args.conf).await?;
+//!
+//!     return Ok(());
+//! }
+//! ```
+
 use std::io;
 
 use crate::BoxResult;
