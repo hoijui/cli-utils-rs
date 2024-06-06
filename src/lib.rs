@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#[cfg(feature = "std_error")]
+pub mod std_error;
 mod tools;
 
 pub use tools::*;

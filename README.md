@@ -31,7 +31,10 @@ SPDX-License-Identifier: CC0-1.0
 A tiny CLI utilities library,
 providing functions and constants useful in many CLI tools.
 
-See [the code](src/tools.rs) for the actual utilities.
+For the actual utilities, see:
+
+- [`tools`](src/tools.rs)
+- [`std_error`](src/std_error.rs) (only available with the `std_error` feature enabled)
 
 > **NOTE** \
 > The author is a rust-newb.
