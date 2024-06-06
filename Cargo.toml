@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022 - 2023 Robin Vobruba <hoijui.quaero@gmail.com>
+# SPDX-FileCopyrightText: 2022 - 2024 Robin Vobruba <hoijui.quaero@gmail.com>
 #
 # SPDX-License-Identifier: Unlicense
 
@@ -14,7 +14,7 @@ description = """
 repository = "https://github.com/hoijui/cli-utils-rs"
 homepage = "https://github.com/hoijui/cli-utils-rs"
 keywords = ["cli", "utility"]
-categories = ["command-line-utilities", "text-processing"]
+categories = ["command-line-utilities", "command-line-interface", "config", "rust-patterns"]
 readme = "README.md"
 edition = "2021"
 
