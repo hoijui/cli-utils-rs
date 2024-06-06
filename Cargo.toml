@@ -47,10 +47,16 @@ print_stderr = "warn"
 [dependencies]
 once_cell = "1.19"
 thiserror = { version = "1.0", default-features = false, optional = true }
+tracing = { version = "0.1", default-features = false, optional = true }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter"], optional = true }
 url = { version = "2.5", default-features = false, optional = true }
 
 [features]
 default = []
+
+# Allow to reduce dependencies,
+# if logging/tracing is not requried.
+logging = ["dep:tracing", "dep:tracing-subscriber"]
 
 # Allow to reduce dependencies,
 # if the `std_errors::Error` enum is not requried.

@@ -34,6 +34,7 @@ providing functions and constants useful in many CLI tools.
 For the actual utilities, see:
 
 - [`tools`](src/tools.rs)
+- [`logging`](src/logging.rs) (only available with the `logging` feature enabled)
 - [`std_error`](src/std_error.rs) (only available with the `std_error` feature enabled)
 
 > **NOTE** \
