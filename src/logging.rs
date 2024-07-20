@@ -8,23 +8,20 @@
 //! # Example
 //!
 //! ```rust
+//! use cli_utils_hoijui as cli_utils;
 //! use cli_utils::BoxResult;
 //! use cli_utils::logging;
+//! use log::LevelFilter;
 //!
-//! #[tokio::main]
-//! async fn main() -> BoxResult<()> {
-//!     let log_reload_handle = logging::setup(clap::crate_name!())?;
+//! fn main() -> BoxResult<()> {
+//!     // TODO Replace "my-crate" with e.g. `clap::crate_name!()`
+//!     let log_reload_handle = logging::setup("my-crate")?;
 //!
-//!     let cli_args = cli::parse()?;
+//!     // TODO Parse log_level from CLI args
+//!     let log_level = LevelFilter::Info;
+//!     logging::set_log_level(&log_reload_handle, log_level)?;
 //!
-//!     if cli_args.verbose {
-//!         logging::set_log_level(&log_reload_handle, LevelFilter::DEBUG)?;
-//!     } else if cli_args.quiet {
-//!         logging::set_log_level(&log_reload_handle, LevelFilter::WARN)?;
-//!     } else {
-//!         logging::set_log_level(&log_reload_handle, LevelFilter::INFO)?;
-//!     }
-//!     crate::process(&cli_args.conf).await?;
+//!     // TODO Run the application
 //!
 //!     return Ok(());
 //! }
@@ -33,6 +30,7 @@
 use std::io;
 
 use crate::BoxResult;
+use log::LevelFilter as LogLevelFilter;
 use tracing::metadata::LevelFilter;
 use tracing_subscriber::{
     fmt,
@@ -74,7 +72,22 @@ pub fn setup(crate_name: &str) -> Result<ReloadHandle, TryInitError> {
     Ok(reload_handle_filter)
 }
 
-pub fn set_log_level(reload_handle: &ReloadHandle, level: LevelFilter) -> BoxResult<()> {
+pub fn set_log_level_tracing(reload_handle: &ReloadHandle, level: LevelFilter) -> BoxResult<()> {
     reload_handle.modify(|filter| *filter = level)?;
     Ok(())
+}
+
+const fn convert_to_tracing(level: LogLevelFilter) -> LevelFilter {
+    match level {
+        LogLevelFilter::Off => LevelFilter::OFF,
+        LogLevelFilter::Error => LevelFilter::ERROR,
+        LogLevelFilter::Warn => LevelFilter::WARN,
+        LogLevelFilter::Info => LevelFilter::INFO,
+        LogLevelFilter::Debug => LevelFilter::DEBUG,
+        LogLevelFilter::Trace => LevelFilter::TRACE,
+    }
+}
+
+pub fn set_log_level(reload_handle: &ReloadHandle, level: LogLevelFilter) -> BoxResult<()> {
+    set_log_level_tracing(reload_handle, convert_to_tracing(level))
 }
