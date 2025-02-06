@@ -64,7 +64,7 @@ pub fn setup(crate_name: &str) -> Result<ReloadHandle, TryInitError> {
     let registry = tracing_subscriber::registry()
         .with(
             EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| format!("{crate_name_snake}=debug,tower_http=debug").into()),
+                .unwrap_or_else(|_| format!("{crate_name_snake}=trace,tower_http=debug").into()),
         )
         .with(filter)
         .with(l_stderr);
