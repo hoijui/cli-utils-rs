@@ -73,6 +73,12 @@ pub fn setup(crate_name: &str) -> Result<ReloadHandle, TryInitError> {
     Ok(reload_handle_filter)
 }
 
+/// Sets the log level of the application.
+///
+/// # Errors
+///
+/// - if the subscriber is gone, or
+/// - if the lock on the subscriber is poisoned
 pub fn set_log_level_tracing(reload_handle: &ReloadHandle, level: LevelFilter) -> BoxResult<()> {
     reload_handle.modify(|filter| *filter = level)?;
     Ok(())
@@ -89,6 +95,12 @@ const fn convert_to_tracing(level: LogLevelFilter) -> LevelFilter {
     }
 }
 
+/// Sets the log level of the application.
+///
+/// # Errors
+///
+/// - if the subscriber is gone, or
+/// - if the lock on the subscriber is poisoned
 pub fn set_log_level(reload_handle: &ReloadHandle, level: LogLevelFilter) -> BoxResult<()> {
     set_log_level_tracing(reload_handle, convert_to_tracing(level))
 }
