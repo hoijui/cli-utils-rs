@@ -11,6 +11,7 @@ mod tools;
 pub use tools::*;
 
 /// This serves as a general purpose, catch-all error type.
+///
 /// It is widely compatible, owned,
 /// other errors can easily be converted to it,
 /// and it depends only on `std`.
