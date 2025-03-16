@@ -9,8 +9,9 @@ use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-pub static STREAM_PATH: Lazy<PathBuf> =
-    Lazy::new(|| PathBuf::from_str("-").expect("This failing should be impossilbe!"));
+pub static STREAM_PATH: Lazy<PathBuf> = Lazy::new(|| {
+    PathBuf::from_str("-").expect("Failed to create path from \"-\"; that should be impossible")
+});
 
 /// Figures out whether the given input or output specifier
 /// indicates a standard stream (stdin or stdout),
@@ -62,7 +63,7 @@ pub fn denotes_std_stream<P: AsRef<Path>>(ident: Option<P>) -> bool {
 /// let in_file = Some("my_dir/my_file.txt".to_string()); // reads from file "$CWD/my_dir/my_file.txt"
 /// let mut reader = create_input_reader(in_file)?;
 ///
-/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossilbe!");
+/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
 /// let in_file = Some(path_buf.as_path()); // reads from file "$CWD/my_dir/my_file.txt"
 /// let mut reader = create_input_reader(in_file)?;
 ///
@@ -152,7 +153,7 @@ pub fn create_input_reader_description<P: AsRef<Path>>(ident: Option<P>) -> Cow<
 /// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
 /// let mut writer = create_output_writer(out_file)?;
 ///
-/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossilbe!");
+/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
 /// let out_file = Some(path_buf.as_path()); // writes to file "$CWD/my_dir/my_file.txt"
 /// let mut writer = create_output_writer(out_file)?;
 ///
@@ -300,7 +301,7 @@ pub fn lines_iterator(
 /// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
 /// write_to_file(&lines, out_file)?;
 ///
-/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossilbe!");
+/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
 /// let out_file = Some(path_buf.as_path()); // writes to file "$CWD/my_dir/my_file.txt"
 /// write_to_file(&lines, out_file)?;
 ///
