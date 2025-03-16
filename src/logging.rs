@@ -29,7 +29,6 @@
 
 use std::io;
 
-use crate::BoxResult;
 use log::LevelFilter as LogLevelFilter;
 use tracing::metadata::LevelFilter;
 use tracing_subscriber::{
@@ -79,9 +78,11 @@ pub fn setup(crate_name: &str) -> Result<ReloadHandle, TryInitError> {
 ///
 /// - if the subscriber is gone, or
 /// - if the lock on the subscriber is poisoned
-pub fn set_log_level_tracing(reload_handle: &ReloadHandle, level: LevelFilter) -> BoxResult<()> {
-    reload_handle.modify(|filter| *filter = level)?;
-    Ok(())
+pub fn set_log_level_tracing(
+    reload_handle: &ReloadHandle,
+    level: LevelFilter,
+) -> Result<(), tracing_subscriber::reload::Error> {
+    reload_handle.modify(|filter| *filter = level)
 }
 
 const fn convert_to_tracing(level: LogLevelFilter) -> LevelFilter {
@@ -101,6 +102,9 @@ const fn convert_to_tracing(level: LogLevelFilter) -> LevelFilter {
 ///
 /// - if the subscriber is gone, or
 /// - if the lock on the subscriber is poisoned
-pub fn set_log_level(reload_handle: &ReloadHandle, level: LogLevelFilter) -> BoxResult<()> {
+pub fn set_log_level(
+    reload_handle: &ReloadHandle,
+    level: LogLevelFilter,
+) -> Result<(), tracing_subscriber::reload::Error> {
     set_log_level_tracing(reload_handle, convert_to_tracing(level))
 }
