@@ -2,14 +2,14 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use once_cell::sync::Lazy;
 use std::borrow::Cow;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::sync::LazyLock;
 
-pub static STREAM_PATH: Lazy<PathBuf> = Lazy::new(|| {
+pub static STREAM_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     PathBuf::from_str("-").expect("Failed to create path from \"-\"; that should be impossible")
 });
 
