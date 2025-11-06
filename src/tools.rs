@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Robin Vobruba <hoijui.quaero@gmail.com>
+// SPDX-FileCopyrightText: 2023 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -9,8 +9,10 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::LazyLock;
 
+pub const STREAM_PATH_STR: &str = "-";
 pub static STREAM_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
-    PathBuf::from_str("-").expect("Failed to create path from \"-\"; that should be impossible")
+    PathBuf::from_str(STREAM_PATH_STR)
+        .expect("Failed to create path from \"-\"; that should be impossible")
 });
 
 /// Figures out whether the given input or output specifier
@@ -380,6 +382,7 @@ mod tests {
         assert_eq!(ident_to_path::<String>(None), None);
         assert_eq!(ident_to_path::<PathBuf>(None), None);
         assert_eq!(ident_to_path::<&Path>(None), None);
+        assert_eq!(ident_to_path(Some(STREAM_PATH_STR)), None);
         assert_eq!(ident_to_path(Some("-")), None);
         assert_eq!(ident_to_path(Some("-".to_string())), None);
         assert_eq!(ident_to_path(Some(PathBuf::from("-"))), None);
