@@ -19,10 +19,10 @@ pub static STREAM_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
 /// Both `None` and `Some("-")` mean stdin/stdout,
 /// which results in a return value of `None`.
 fn ident_to_path<P: AsRef<Path>>(ident: Option<P>) -> Option<P> {
-    if let Some(file_path) = ident.as_ref() {
-        if file_path.as_ref() == STREAM_PATH.as_path() {
-            return None;
-        }
+    if let Some(file_path) = ident.as_ref()
+        && file_path.as_ref() == STREAM_PATH.as_path()
+    {
+        return None;
     }
     ident
 }

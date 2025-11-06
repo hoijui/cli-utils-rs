@@ -32,12 +32,11 @@ use std::io;
 use log::LevelFilter as LogLevelFilter;
 use tracing::metadata::LevelFilter;
 use tracing_subscriber::{
-    fmt,
+    EnvFilter, Registry, fmt,
     layer::Layered,
     prelude::*,
     reload::{self, Handle},
     util::TryInitError,
-    EnvFilter, Registry,
 };
 
 type ReloadHandle = Handle<LevelFilter, Layered<EnvFilter, Registry, Registry>>;
