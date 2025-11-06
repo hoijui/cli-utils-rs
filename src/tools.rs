@@ -206,9 +206,10 @@ pub fn create_output_writer_description<P: AsRef<Path>>(ident: Option<P>) -> Cow
 /// Removes an EOL indicator from the end of the given string,
 /// if one is present.
 /// Removes either:
-/// * "\r\n" as used in DOS and Windows, or
-/// * "\n" as used in most of the rest of the universe, or
-/// * "" if none of the above is present.
+///
+/// - "\r\n" as used in DOS and Windows, or
+/// - "\n" as used in most of the rest of the universe, or
+/// - "" if none of the above is present.
 ///
 /// # Examples
 ///
