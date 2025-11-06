@@ -420,8 +420,8 @@ mod tests {
         expected: &[&str],
         strip_eol: bool,
     ) -> io::Result<()> {
-        let mut input = input.as_bytes();
-        let actual = lines_iterator(&mut input, strip_eol).collect::<io::Result<Vec<_>>>()?;
+        let mut input_bytes = input.as_bytes();
+        let actual = lines_iterator(&mut input_bytes, strip_eol).collect::<io::Result<Vec<_>>>()?;
         assert_eq!(expected, &actual);
         Ok(())
     }
