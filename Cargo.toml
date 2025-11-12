@@ -44,11 +44,15 @@ print_stderr = "warn"
 multiple_crate_versions = { level = "allow", priority = 1 }
 
 [dependencies]
+async-std = { version = "1.13", optional = true }
 log = { version = "0.4", default-features = false, optional = true }
 thiserror = { version = "2.0", default-features = false, optional = true }
 tracing = { version = "0.1", default-features = false, optional = true }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"], optional = true }
 url = { version = "2.5", default-features = false, optional = true }
+
+[dev-dependencies]
+tokio = { version = "1.48", default-features = false, features = ["rt", "macros"] }
 
 [features]
 default = []
@@ -64,3 +68,6 @@ std_error = ["dep:thiserror"]
 # Allow to reduce dependencies,
 # if the `std_errors::Error::InvalidUrl` enum variant is not required.
 url_parse_error = ["std_error", "dep:url"]
+
+# Use async_std instead of std
+async = ["dep:async-std"]

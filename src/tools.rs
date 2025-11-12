@@ -3,11 +3,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use std::borrow::Cow;
-use std::fs::File;
-use std::io::{self, BufRead, BufReader, Write};
-use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::LazyLock;
+
+#[cfg(feature = "async")]
+use {
+    async_std::fs::File,
+    async_std::io::BufReadExt,
+    async_std::io::{self, BufRead, BufReader, Write, WriteExt},
+    async_std::path::{Path, PathBuf},
+    async_std::stream::Stream,
+};
+#[cfg(not(feature = "async"))]
+use {
+    std::fs::File,
+    std::io::{self, BufRead, BufReader, Write},
+    std::path::{Path, PathBuf},
+};
 
 pub const STREAM_PATH_STR: &str = "-";
 pub static STREAM_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
@@ -47,7 +59,71 @@ pub fn denotes_std_stream<P: AsRef<Path>>(ident: Option<P>) -> bool {
 /// # use std::path::PathBuf;
 /// # use std::str::FromStr;
 /// use cli_utils_hoijui::create_input_reader;
+/// #[cfg(feature = "async")]
+/// use async_std::io::BufReadExt;
 ///
+/// # #[cfg(feature = "async")]
+/// # async fn create_input_reader_example() -> io::Result<()> {
+///
+/// let in_file = None as Option<&str>; // reads from stdin
+/// let mut reader = create_input_reader(in_file).await?;
+///
+/// let in_file = None as Option<&String>; // reads from stdin
+/// let mut reader = create_input_reader(in_file).await?;
+///
+/// let in_file = Some("-"); // reads from stdin
+/// let mut reader = create_input_reader(in_file).await?;
+///
+/// let in_file = Some("my_dir/my_file.txt"); // reads from file "$CWD/my_dir/my_file.txt"
+/// let mut reader = create_input_reader(in_file).await?;
+///
+/// let in_file = Some("my_dir/my_file.txt".to_string()); // reads from file "$CWD/my_dir/my_file.txt"
+/// let mut reader = create_input_reader(in_file).await?;
+///
+/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
+/// let in_file = Some(path_buf.as_path()); // reads from file "$CWD/my_dir/my_file.txt"
+/// let mut reader = create_input_reader(in_file).await?;
+///
+/// let in_file = Some(path_buf); // reads from file "$CWD/my_dir/my_file.txt"
+/// let mut reader = create_input_reader(in_file).await?;
+///
+/// let mut buffer = String::new();
+/// loop {
+///     let line_size = reader.read_line(&mut buffer).await?;
+///     if line_size == 0 {
+///         break;
+///     }
+///     print!("{}", buffer);
+/// }
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # Errors
+///
+/// If a file path is specified, and it is not possible to read from it.
+#[cfg(feature = "async")]
+pub async fn create_input_reader<P: AsRef<Path>>(
+    ident: Option<P>,
+) -> io::Result<Box<dyn BufRead + Unpin>> {
+    match ident_to_path(ident) {
+        None => Ok(create_input_reader_stdin()),
+        Some(path) => create_input_reader_file(path).await,
+    }
+}
+
+/// Creates a reader from a string identifier.
+/// Both `None` and `Some("-")` mean stdin.
+///
+/// # Example
+///
+/// ```rust
+/// # use std::io;
+/// # use std::path::PathBuf;
+/// # use std::str::FromStr;
+/// use cli_utils_hoijui::create_input_reader;
+///
+/// # #[cfg(not(feature = "async"))]
 /// # fn create_input_reader_example() -> io::Result<()> {
 ///
 /// let in_file = None as Option<&str>; // reads from stdin
@@ -87,6 +163,7 @@ pub fn denotes_std_stream<P: AsRef<Path>>(ident: Option<P>) -> bool {
 /// # Errors
 ///
 /// If a file path is specified, and it is not possible to read from it.
+#[cfg(not(feature = "async"))]
 pub fn create_input_reader<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<dyn BufRead>> {
     ident_to_path(ident).map_or_else(
         || Ok(create_input_reader_stdin()),
@@ -100,6 +177,21 @@ pub fn create_input_reader<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<d
 /// # Errors
 ///
 /// If a file path is specified, and it is not possible to read from it.
+#[cfg(feature = "async")]
+pub async fn create_input_reader_file<P: AsRef<Path>>(
+    file_path: P,
+) -> io::Result<Box<dyn BufRead + Unpin>> {
+    let file = File::open(file_path).await?;
+    Ok(Box::new(BufReader::new(file)))
+}
+
+/// Creates a reader from a file-path.
+/// See [`create_input_reader`].
+///
+/// # Errors
+///
+/// If a file path is specified, and it is not possible to read from it.
+#[cfg(not(feature = "async"))]
 pub fn create_input_reader_file<P: AsRef<Path>>(file_path: P) -> io::Result<Box<dyn BufRead>> {
     let file = File::open(file_path)?;
     Ok(Box::new(BufReader::new(file)))
@@ -108,6 +200,15 @@ pub fn create_input_reader_file<P: AsRef<Path>>(file_path: P) -> io::Result<Box<
 /// Creates a reader that reads from stdin.
 /// See [`create_input_reader`].
 #[must_use]
+#[cfg(feature = "async")]
+pub fn create_input_reader_stdin() -> Box<dyn BufRead + Unpin> {
+    Box::new(BufReader::new(io::stdin()))
+}
+
+/// Creates a reader that reads from stdin.
+/// See [`create_input_reader`].
+#[must_use]
+#[cfg(not(feature = "async"))]
 pub fn create_input_reader_stdin() -> Box<dyn BufRead> {
     Box::new(BufReader::new(io::stdin()))
 }
@@ -142,7 +243,65 @@ pub fn create_input_reader_description<P: AsRef<Path>>(ident: Option<P>) -> Cow<
 /// # use std::path::PathBuf;
 /// # use std::str::FromStr;
 /// use cli_utils_hoijui::create_output_writer;
+/// # #[cfg(feature = "async")]
+/// use async_std::io::WriteExt;
 ///
+/// # #[cfg(feature = "async")]
+/// # async fn create_output_writer_example() -> io::Result<()> {
+/// let lines = vec!["line 1", "line 2", "line 3"];
+///
+/// let out_file = None as Option<&str>; // writes to stdout
+/// let mut writer = create_output_writer(out_file).await?;
+///
+/// let out_file = Some("-"); // writes to stdout
+/// let mut writer = create_output_writer(out_file).await?;
+///
+/// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
+/// let mut writer = create_output_writer(out_file).await?;
+///
+/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
+/// let out_file = Some(path_buf.as_path()); // writes to file "$CWD/my_dir/my_file.txt"
+/// let mut writer = create_output_writer(out_file).await?;
+///
+/// let out_file = Some(path_buf); // writes to file "$CWD/my_dir/my_file.txt"
+/// let mut writer = create_output_writer(out_file).await?;
+///
+/// for line in lines {
+///     writer.write_all(line.as_bytes()).await?;
+///     writer.write_all(b"\n").await?;
+/// }
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # Errors
+///
+/// If a file path is specified, and it is not possible to write to it.
+#[cfg(feature = "async")]
+pub async fn create_output_writer<P: AsRef<Path>>(
+    ident: Option<P>,
+) -> io::Result<Box<dyn Write + Unpin>> {
+    match ident_to_path(ident) {
+        None => Ok(create_output_writer_stdout()),
+        Some(path) => create_output_writer_file(path).await,
+    }
+}
+
+/// Creates a writer from a string identifier.
+/// Both `None` and `Some("-")` mean stdout.
+/// See also: [`write_to_file`]
+///
+/// # Example
+///
+/// ```rust
+/// # use std::io;
+/// # use std::path::PathBuf;
+/// # use std::str::FromStr;
+/// use cli_utils_hoijui::create_output_writer;
+/// # #[cfg(feature = "async")]
+/// use async_std::io::WriteExt;
+///
+/// # #[cfg(not(feature = "async"))]
 /// # fn create_output_writer_example() -> io::Result<()> {
 /// let lines = vec!["line 1", "line 2", "line 3"];
 ///
@@ -173,6 +332,7 @@ pub fn create_input_reader_description<P: AsRef<Path>>(ident: Option<P>) -> Cow<
 /// # Errors
 ///
 /// If a file path is specified, and it is not possible to write to it.
+#[cfg(not(feature = "async"))]
 pub fn create_output_writer<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<dyn Write>> {
     ident_to_path(ident).map_or_else(
         || Ok(create_output_writer_stdout()),
@@ -186,6 +346,21 @@ pub fn create_output_writer<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<
 /// # Errors
 ///
 /// If a file path is specified, and it is not possible to write to it.
+#[cfg(feature = "async")]
+pub async fn create_output_writer_file<P: AsRef<Path>>(
+    file_path: P,
+) -> io::Result<Box<dyn Write + Unpin>> {
+    let file = File::open(file_path).await?;
+    Ok(Box::new(file) as Box<dyn Write + Unpin>)
+}
+
+/// Creates a writer that writes to a file.
+/// See [`create_output_writer`].
+///
+/// # Errors
+///
+/// If a file path is specified, and it is not possible to write to it.
+#[cfg(not(feature = "async"))]
 pub fn create_output_writer_file<P: AsRef<Path>>(file_path: P) -> io::Result<Box<dyn Write>> {
     let file = File::create(file_path)?;
     Ok(Box::new(file) as Box<dyn Write>)
@@ -193,6 +368,12 @@ pub fn create_output_writer_file<P: AsRef<Path>>(file_path: P) -> io::Result<Box
 
 /// Creates a writer that writes to stdout.
 /// See [`create_output_writer`].
+#[cfg(feature = "async")]
+#[must_use]
+pub fn create_output_writer_stdout() -> Box<dyn Write + Unpin> {
+    Box::new(io::stdout())
+}
+#[cfg(not(feature = "async"))]
 #[must_use]
 pub fn create_output_writer_stdout() -> Box<dyn Write> {
     Box::new(io::stdout())
@@ -234,6 +415,46 @@ pub fn remove_eol(line: &mut String) {
     }
 }
 
+/// Creates an async stream of lines ("`Stream<String>`")
+/// from an input stream (`BufReader`).
+///
+/// # Example
+///
+/// ```rust
+/// # use std::io;
+/// use cli_utils_hoijui::lines_iterator;
+/// # #[cfg(feature = "async")]
+/// use async_std::io::BufReader;
+/// # #[cfg(feature = "async")]
+/// use async_std::stream::StreamExt;
+///
+/// # #[cfg(feature = "async")]
+/// # async fn lines_iterator_example<R: async_std::io::BufRead + Unpin>(reader: &mut BufReader<R>) -> io::Result<()> {
+///     let mut lines_stream = lines_iterator(reader, true);
+///     while let Some(line) = lines_stream.next().await {
+///         println!("{}", &line?)
+///     }
+/// #     Ok(())
+/// # }
+/// ```
+///
+/// # Panics
+///
+/// - if `strip_eol` is `false`,
+///   because that is not supported by the underlying function we use.
+#[cfg(feature = "async")]
+pub fn lines_iterator<R: async_std::io::BufRead + Unpin>(
+    reader: &mut BufReader<R>,
+    strip_eol: bool,
+) -> impl Stream<Item = io::Result<String>> {
+    assert!(
+        strip_eol,
+        "Async lines stream (~= iterator) always skips new-lines, \
+so `strip_eol` must be `true`."
+    );
+    reader.lines()
+}
+
 /// Creates a line iterator ("`Iterator<String>`")
 /// from an input stream (`BufRead`).
 ///
@@ -243,6 +464,7 @@ pub fn remove_eol(line: &mut String) {
 /// # use std::io;
 /// use cli_utils_hoijui::lines_iterator;
 ///
+/// # #[cfg(not(feature = "async"))]
 /// # fn lines_iterator_example(reader: &mut impl io::BufRead) -> io::Result<()> {
 ///     for line in lines_iterator(reader, true) {
 ///         println!("{}", &line?)
@@ -250,6 +472,7 @@ pub fn remove_eol(line: &mut String) {
 /// #     Ok(())
 /// # }
 /// ```
+#[cfg(not(feature = "async"))]
 pub fn lines_iterator(
     reader: &mut impl BufRead,
     strip_eol: bool,
@@ -292,6 +515,61 @@ pub fn lines_iterator(
 /// # use std::str::FromStr;
 /// use cli_utils_hoijui::write_to_file;
 ///
+/// # #[cfg(feature = "async")]
+/// # async fn write_to_file_example() -> io::Result<()> {
+/// let lines = vec!["line 1", "line 2", "line 3"];
+///
+/// let out_file = None as Option<&str>; // writes to stdout
+/// write_to_file(&lines, out_file).await?;
+///
+/// let out_file = Some("-"); // writes to stdout
+/// write_to_file(&lines, out_file).await?;
+///
+/// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
+/// write_to_file(&lines, out_file).await?;
+///
+/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
+/// let out_file = Some(path_buf.as_path()); // writes to file "$CWD/my_dir/my_file.txt"
+/// write_to_file(&lines, out_file).await?;
+///
+/// let out_file = Some(path_buf); // writes to file "$CWD/my_dir/my_file.txt"
+/// write_to_file(&lines, out_file).await?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # Errors
+///
+/// If writing to `destination` failed.
+#[cfg(feature = "async")]
+pub async fn write_to_file<L: AsRef<str> + Send + Sync, P: AsRef<Path> + Send + Sync>(
+    lines: impl IntoIterator<Item = L>,
+    destination: Option<P>,
+) -> io::Result<()> {
+    let writer = create_output_writer(destination).await?;
+
+    let mut writer_pinned = Box::into_pin(writer);
+    for line in lines {
+        writer_pinned.write_all(line.as_ref().as_bytes()).await?;
+        writer_pinned.write_all(b"\n").await?;
+    }
+
+    Ok(())
+}
+
+/// Writes a list of strings to a file;
+/// one per line.
+/// See also: [`create_output_writer`]
+///
+/// # Example
+///
+/// ```rust
+/// # use std::io;
+/// # use std::path::PathBuf;
+/// # use std::str::FromStr;
+/// use cli_utils_hoijui::write_to_file;
+///
+/// # #[cfg(not(feature = "async"))]
 /// # fn write_to_file_example() -> io::Result<()> {
 /// let lines = vec!["line 1", "line 2", "line 3"];
 ///
@@ -317,11 +595,12 @@ pub fn lines_iterator(
 /// # Errors
 ///
 /// If writing to `destination` failed.
+#[cfg(not(feature = "async"))]
 pub fn write_to_file<L: AsRef<str>, P: AsRef<Path>>(
     lines: impl IntoIterator<Item = L>,
     destination: Option<P>,
 ) -> io::Result<()> {
-    let mut writer = crate::tools::create_output_writer(destination)?;
+    let mut writer = create_output_writer(destination)?;
 
     for line in lines {
         writer.write_all(line.as_ref().as_bytes())?;
@@ -333,6 +612,9 @@ pub fn write_to_file<L: AsRef<str>, P: AsRef<Path>>(
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "async")]
+    use {async_std::io::BufReader, async_std::stream::Stream, async_std::stream::StreamExt};
+
     use super::*;
 
     fn test_remove_eol_check(input: &str, expected: &str) {
@@ -418,6 +700,31 @@ mod tests {
         assert!(!denotes_std_stream(Some(PathBuf::from("/pth/x").as_path())));
     }
 
+    #[cfg(feature = "async")]
+    async fn try_concat_stream<T, E>(
+        stream: impl Stream<Item = Result<T, E>>,
+    ) -> Result<Vec<T>, E> {
+        let mut res = vec![];
+        let mut stream_pinned = std::pin::pin!(stream);
+        while let Some(item) = stream_pinned.next().await {
+            res.push(item?);
+        }
+        Ok(res)
+    }
+
+    #[cfg(feature = "async")]
+    async fn test_lines_iterator_check(
+        input: &str,
+        expected: &[&str],
+        strip_eol: bool,
+    ) -> io::Result<()> {
+        let input_bytes = input.as_bytes();
+        let mut input_buf_reader = BufReader::new(input_bytes);
+        let actual = try_concat_stream(lines_iterator(&mut input_buf_reader, strip_eol)).await?;
+        assert_eq!(expected, &actual);
+        Ok(())
+    }
+    #[cfg(not(feature = "async"))]
     fn test_lines_iterator_check(
         input: &str,
         expected: &[&str],
@@ -429,6 +736,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(feature = "async"))]
     macro_rules! test_lines_iterator {
         ($($name:ident: { input: $input:expr, expected: $expected:expr, },)*) => {
         $(
@@ -440,6 +748,7 @@ mod tests {
         }
     }
 
+    #[cfg(not(feature = "async"))]
     test_lines_iterator! {
         test_lines_iterator_simple_1: {
             input: "line 1\nline 2\nline 3",
@@ -475,6 +784,18 @@ mod tests {
         },
     }
 
+    #[cfg(feature = "async")]
+    macro_rules! test_lines_iterator_strip {
+        ($($name:ident: $input:expr,)*) => {
+        $(
+            #[tokio::test]
+            async fn $name() -> io::Result<()> {
+                test_lines_iterator_check($input, &["line 1", "line 2", "line 3"], true).await
+            }
+        )*
+        }
+    }
+    #[cfg(not(feature = "async"))]
     macro_rules! test_lines_iterator_strip {
         ($($name:ident: $input:expr,)*) => {
         $(
