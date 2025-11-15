@@ -27,363 +27,415 @@ pub static STREAM_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
         .expect("Failed to create path from \"-\"; that should be impossible")
 });
 
-/// Figures out whether the given input or output specifier
-/// indicates a standard stream (stdin or stdout),
-/// or rather a file-path.
-/// Both `None` and `Some("-")` mean stdin/stdout,
-/// which results in a return value of `None`.
-fn ident_to_path<P: AsRef<Path>>(ident: Option<P>) -> Option<P> {
-    if let Some(file_path) = ident.as_ref()
-        && file_path.as_ref() == STREAM_PATH.as_path()
-    {
-        return None;
+/// Denotes/identifies/specifies a stream,
+/// either stdin, stdout, or a file-path.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StreamIdent {
+    /// Denotes the standard input-stream.
+    StdIn,
+    /// Denotes the standard output-stream.
+    StdOut,
+    /// Denotes a file-path and whether it is an input stream.
+    ///
+    /// Note that the path "-" here would not have a special meaning,
+    /// it would simply denote a file with that name.
+    Path(PathBuf, bool),
+}
+
+impl StreamIdent {
+    #[must_use]
+    pub const fn new_std(r#in: bool) -> Self {
+        if r#in { Self::StdIn } else { Self::StdOut }
     }
-    ident
-}
 
-/// Figures out whether the given input or output specifier
-/// indicates a standard stream (stdin or stdout),
-/// or rather a file-path.
-/// Both `None` and `Some("-")` mean stdin/stdout.
-pub fn denotes_std_stream<P: AsRef<Path>>(ident: Option<P>) -> bool {
-    ident_to_path(ident).is_none()
-}
-
-/// Creates a reader from a string identifier.
-/// Both `None` and `Some("-")` mean stdin.
-///
-/// # Example
-///
-/// ```rust
-/// # use std::io;
-/// # use std::path::PathBuf;
-/// # use std::str::FromStr;
-/// use cli_utils_hoijui::create_input_reader;
-/// #[cfg(feature = "async")]
-/// use async_std::io::BufReadExt;
-///
-/// # #[cfg(feature = "async")]
-/// # async fn create_input_reader_example() -> io::Result<()> {
-///
-/// let in_file = None as Option<&str>; // reads from stdin
-/// let mut reader = create_input_reader(in_file).await?;
-///
-/// let in_file = None as Option<&String>; // reads from stdin
-/// let mut reader = create_input_reader(in_file).await?;
-///
-/// let in_file = Some("-"); // reads from stdin
-/// let mut reader = create_input_reader(in_file).await?;
-///
-/// let in_file = Some("my_dir/my_file.txt"); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = create_input_reader(in_file).await?;
-///
-/// let in_file = Some("my_dir/my_file.txt".to_string()); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = create_input_reader(in_file).await?;
-///
-/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
-/// let in_file = Some(path_buf.as_path()); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = create_input_reader(in_file).await?;
-///
-/// let in_file = Some(path_buf); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = create_input_reader(in_file).await?;
-///
-/// let mut buffer = String::new();
-/// loop {
-///     let line_size = reader.read_line(&mut buffer).await?;
-///     if line_size == 0 {
-///         break;
-///     }
-///     print!("{}", buffer);
-/// }
-/// # Ok(())
-/// # }
-/// ```
-///
-/// # Errors
-///
-/// If a file path is specified, and it is not possible to read from it.
-#[cfg(feature = "async")]
-pub async fn create_input_reader<P: AsRef<Path>>(
-    ident: Option<P>,
-) -> io::Result<Box<dyn BufRead + Unpin>> {
-    match ident_to_path(ident) {
-        None => Ok(create_input_reader_stdin()),
-        Some(path) => create_input_reader_file(path).await,
+    pub fn from_path_opt<P: AsRef<Path> + ?Sized + Unpin + Send + Sync>(
+        ident: Option<&P>,
+        r#in: bool,
+    ) -> Self {
+        if let Some(file_path) = ident
+            && file_path.as_ref() != STREAM_PATH.as_path()
+        {
+            return Self::Path(PathBuf::from(file_path.as_ref()), r#in);
+        }
+        Self::new_std(r#in)
     }
-}
 
-/// Creates a reader from a string identifier.
-/// Both `None` and `Some("-")` mean stdin.
-///
-/// # Example
-///
-/// ```rust
-/// # use std::io;
-/// # use std::path::PathBuf;
-/// # use std::str::FromStr;
-/// use cli_utils_hoijui::create_input_reader;
-///
-/// # #[cfg(not(feature = "async"))]
-/// # fn create_input_reader_example() -> io::Result<()> {
-///
-/// let in_file = None as Option<&str>; // reads from stdin
-/// let mut reader = create_input_reader(in_file)?;
-///
-/// let in_file = None as Option<&String>; // reads from stdin
-/// let mut reader = create_input_reader(in_file)?;
-///
-/// let in_file = Some("-"); // reads from stdin
-/// let mut reader = create_input_reader(in_file)?;
-///
-/// let in_file = Some("my_dir/my_file.txt"); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = create_input_reader(in_file)?;
-///
-/// let in_file = Some("my_dir/my_file.txt".to_string()); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = create_input_reader(in_file)?;
-///
-/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
-/// let in_file = Some(path_buf.as_path()); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = create_input_reader(in_file)?;
-///
-/// let in_file = Some(path_buf); // reads from file "$CWD/my_dir/my_file.txt"
-/// let mut reader = create_input_reader(in_file)?;
-///
-/// let mut buffer = String::new();
-/// loop {
-///     let line_size = reader.read_line(&mut buffer)?;
-///     if line_size == 0 {
-///         break;
-///     }
-///     print!("{}", buffer);
-/// }
-/// # Ok(())
-/// # }
-/// ```
-///
-/// # Errors
-///
-/// If a file path is specified, and it is not possible to read from it.
-#[cfg(not(feature = "async"))]
-pub fn create_input_reader<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<dyn BufRead>> {
-    ident_to_path(ident).map_or_else(
-        || Ok(create_input_reader_stdin()),
-        |path| create_input_reader_file(path),
-    )
-}
-
-/// Creates a reader from a file-path.
-/// See [`create_input_reader`].
-///
-/// # Errors
-///
-/// If a file path is specified, and it is not possible to read from it.
-#[cfg(feature = "async")]
-pub async fn create_input_reader_file<P: AsRef<Path>>(
-    file_path: P,
-) -> io::Result<Box<dyn BufRead + Unpin>> {
-    let file = File::open(file_path).await?;
-    Ok(Box::new(BufReader::new(file)))
-}
-
-/// Creates a reader from a file-path.
-/// See [`create_input_reader`].
-///
-/// # Errors
-///
-/// If a file path is specified, and it is not possible to read from it.
-#[cfg(not(feature = "async"))]
-pub fn create_input_reader_file<P: AsRef<Path>>(file_path: P) -> io::Result<Box<dyn BufRead>> {
-    let file = File::open(file_path)?;
-    Ok(Box::new(BufReader::new(file)))
-}
-
-/// Creates a reader that reads from stdin.
-/// See [`create_input_reader`].
-#[must_use]
-#[cfg(feature = "async")]
-pub fn create_input_reader_stdin() -> Box<dyn BufRead + Unpin> {
-    Box::new(BufReader::new(io::stdin()))
-}
-
-/// Creates a reader that reads from stdin.
-/// See [`create_input_reader`].
-#[must_use]
-#[cfg(not(feature = "async"))]
-pub fn create_input_reader_stdin() -> Box<dyn BufRead> {
-    Box::new(BufReader::new(io::stdin()))
-}
-
-/// Returns `std_stream_name` if that is denoted,
-/// "file: '<FILE-NAME>'" otherwise.
-/// This might be useful for logging.
-fn create_stream_ident_description<P: AsRef<Path>>(
-    ident: Option<P>,
-    std_stream_name: &'_ str,
-) -> Cow<'_, str> {
-    ident_to_path(ident).map_or(Cow::Borrowed(std_stream_name), |path| {
-        Cow::Owned(format!("file: '{}'", path.as_ref().display()))
-    })
-}
-
-/// Returns "stdin" if that is denoted,
-/// `file: '<FILE-NAME>'` otherwise.
-/// This might be useful for logging.
-pub fn create_input_reader_description<P: AsRef<Path>>(ident: Option<P>) -> Cow<'static, str> {
-    create_stream_ident_description(ident, "stdin")
-}
-
-/// Creates a writer from a string identifier.
-/// Both `None` and `Some("-")` mean stdout.
-/// See also: [`write_to_file`]
-///
-/// # Example
-///
-/// ```rust
-/// # use std::io;
-/// # use std::path::PathBuf;
-/// # use std::str::FromStr;
-/// use cli_utils_hoijui::create_output_writer;
-/// # #[cfg(feature = "async")]
-/// use async_std::io::WriteExt;
-///
-/// # #[cfg(feature = "async")]
-/// # async fn create_output_writer_example() -> io::Result<()> {
-/// let lines = vec!["line 1", "line 2", "line 3"];
-///
-/// let out_file = None as Option<&str>; // writes to stdout
-/// let mut writer = create_output_writer(out_file).await?;
-///
-/// let out_file = Some("-"); // writes to stdout
-/// let mut writer = create_output_writer(out_file).await?;
-///
-/// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
-/// let mut writer = create_output_writer(out_file).await?;
-///
-/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
-/// let out_file = Some(path_buf.as_path()); // writes to file "$CWD/my_dir/my_file.txt"
-/// let mut writer = create_output_writer(out_file).await?;
-///
-/// let out_file = Some(path_buf); // writes to file "$CWD/my_dir/my_file.txt"
-/// let mut writer = create_output_writer(out_file).await?;
-///
-/// for line in lines {
-///     writer.write_all(line.as_bytes()).await?;
-///     writer.write_all(b"\n").await?;
-/// }
-/// # Ok(())
-/// # }
-/// ```
-///
-/// # Errors
-///
-/// If a file path is specified, and it is not possible to write to it.
-#[cfg(feature = "async")]
-pub async fn create_output_writer<P: AsRef<Path>>(
-    ident: Option<P>,
-) -> io::Result<Box<dyn Write + Unpin>> {
-    match ident_to_path(ident) {
-        None => Ok(create_output_writer_stdout()),
-        Some(path) => create_output_writer_file(path).await,
+    pub fn from_path_buf_opt(ident: Option<PathBuf>, r#in: bool) -> Self {
+        if let Some(file_path) = ident
+            && file_path.as_path() != STREAM_PATH.as_path()
+        {
+            return Self::Path(file_path, r#in);
+        }
+        Self::new_std(r#in)
     }
-}
 
-/// Creates a writer from a string identifier.
-/// Both `None` and `Some("-")` mean stdout.
-/// See also: [`write_to_file`]
-///
-/// # Example
-///
-/// ```rust
-/// # use std::io;
-/// # use std::path::PathBuf;
-/// # use std::str::FromStr;
-/// use cli_utils_hoijui::create_output_writer;
-/// # #[cfg(feature = "async")]
-/// use async_std::io::WriteExt;
-///
-/// # #[cfg(not(feature = "async"))]
-/// # fn create_output_writer_example() -> io::Result<()> {
-/// let lines = vec!["line 1", "line 2", "line 3"];
-///
-/// let out_file = None as Option<&str>; // writes to stdout
-/// let mut writer = create_output_writer(out_file)?;
-///
-/// let out_file = Some("-"); // writes to stdout
-/// let mut writer = create_output_writer(out_file)?;
-///
-/// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
-/// let mut writer = create_output_writer(out_file)?;
-///
-/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
-/// let out_file = Some(path_buf.as_path()); // writes to file "$CWD/my_dir/my_file.txt"
-/// let mut writer = create_output_writer(out_file)?;
-///
-/// let out_file = Some(path_buf); // writes to file "$CWD/my_dir/my_file.txt"
-/// let mut writer = create_output_writer(out_file)?;
-///
-/// for line in lines {
-///     writer.write_all(line.as_bytes())?;
-///     writer.write_all(b"\n")?;
-/// }
-/// # Ok(())
-/// # }
-/// ```
-///
-/// # Errors
-///
-/// If a file path is specified, and it is not possible to write to it.
-#[cfg(not(feature = "async"))]
-pub fn create_output_writer<P: AsRef<Path>>(ident: Option<P>) -> io::Result<Box<dyn Write>> {
-    ident_to_path(ident).map_or_else(
-        || Ok(create_output_writer_stdout()),
-        |path| create_output_writer_file(path),
-    )
-}
+    pub fn from_path<P: AsRef<Path> + ?Sized + Unpin + Send + Sync>(ident: &P, r#in: bool) -> Self {
+        if ident.as_ref() != STREAM_PATH.as_path() {
+            return Self::Path(PathBuf::from(ident.as_ref()), r#in);
+        }
+        Self::new_std(r#in)
+    }
 
-/// Creates a writer that writes to a file.
-/// See [`create_output_writer`].
-///
-/// # Errors
-///
-/// If a file path is specified, and it is not possible to write to it.
-#[cfg(feature = "async")]
-pub async fn create_output_writer_file<P: AsRef<Path>>(
-    file_path: P,
-) -> io::Result<Box<dyn Write + Unpin>> {
-    let file = File::open(file_path).await?;
-    Ok(Box::new(file) as Box<dyn Write + Unpin>)
-}
+    pub fn from_path_buf(ident: PathBuf, r#in: bool) -> Self {
+        if ident.as_path() != STREAM_PATH.as_path() {
+            return Self::Path(ident, r#in);
+        }
+        Self::new_std(r#in)
+    }
 
-/// Creates a writer that writes to a file.
-/// See [`create_output_writer`].
-///
-/// # Errors
-///
-/// If a file path is specified, and it is not possible to write to it.
-#[cfg(not(feature = "async"))]
-pub fn create_output_writer_file<P: AsRef<Path>>(file_path: P) -> io::Result<Box<dyn Write>> {
-    let file = File::create(file_path)?;
-    Ok(Box::new(file) as Box<dyn Write>)
-}
+    /// Returns a human oriented description of the identified stream.
+    ///
+    /// This might be useful for logging.
+    ///
+    /// This returns:
+    ///
+    /// - "file-system stream (in|out): '<FILE-NAME>'" if self identifies a path
+    /// - otherwise:
+    ///   - "stdin" if `self.in` is `true`
+    ///   - "stdout" if it is `false`
+    #[must_use]
+    pub fn description(&self) -> Cow<'static, str> {
+        match self {
+            Self::StdIn => Cow::Borrowed("stdin"),
+            Self::StdOut => Cow::Borrowed("stdout"),
+            Self::Path(path, r#in) => Cow::Owned(format!(
+                "file-system stream ({}): '{}'",
+                if *r#in { "in" } else { "out" },
+                path.display()
+            )),
+        }
+    }
 
-/// Creates a writer that writes to stdout.
-/// See [`create_output_writer`].
-#[cfg(feature = "async")]
-#[must_use]
-pub fn create_output_writer_stdout() -> Box<dyn Write + Unpin> {
-    Box::new(io::stdout())
-}
-#[cfg(not(feature = "async"))]
-#[must_use]
-pub fn create_output_writer_stdout() -> Box<dyn Write> {
-    Box::new(io::stdout())
-}
+    /// Creates a reader from a string identifier.
+    /// Both `None` and `Some("-")` mean stdin.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::io;
+    /// # use async_std::path::Path;
+    /// # use async_std::path::PathBuf;
+    /// # use std::str::FromStr;
+    /// use cli_utils_hoijui::StreamIdent;
+    /// #[cfg(feature = "async")]
+    /// use async_std::io::BufReadExt;
+    ///
+    /// # #[cfg(feature = "async")]
+    /// # async fn create_input_reader_example() -> io::Result<()> {
+    ///
+    /// let in_stream_ident = StreamIdent::from_path_buf_opt(None, true); // reads from stdin
+    /// let mut reader = in_stream_ident.create_input_reader().await?;
+    ///
+    /// let in_stream_ident = StreamIdent::from_path_opt::<Path>(None, true); // reads from stdin
+    /// let mut reader = in_stream_ident.create_input_reader().await?;
+    ///
+    /// let in_stream_ident = StreamIdent::from_path_buf_opt(Some("-".into()), true); // reads from stdin
+    /// let mut reader = in_stream_ident.create_input_reader().await?;
+    ///
+    /// let in_stream_ident = StreamIdent::from_path_buf_opt(Some("my_dir/my_file.txt".into()), true); // reads from file "$CWD/my_dir/my_file.txt"
+    /// let mut reader = in_stream_ident.create_input_reader().await?;
+    ///
+    /// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
+    /// let in_stream_ident = StreamIdent::from_path_opt(Some(path_buf.as_path()), true); // reads from file "$CWD/my_dir/my_file.txt"
+    /// let mut reader = in_stream_ident.create_input_reader().await?;
+    ///
+    /// let in_stream_ident = StreamIdent::from_path_buf_opt(Some(path_buf), true); // reads from file "$CWD/my_dir/my_file.txt"
+    /// let mut reader = in_stream_ident.create_input_reader().await?;
+    ///
+    /// let mut buffer = String::new();
+    /// loop {
+    ///     let line_size = reader.read_line(&mut buffer).await?;
+    ///     if line_size == 0 {
+    ///         break;
+    ///     }
+    ///     print!("{}", buffer);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// - if a file path is specified, and it is not possible to read from it
+    /// - if this method is called on an output stream specifier
+    #[cfg(feature = "async")]
+    pub async fn create_input_reader(&self) -> io::Result<Box<dyn BufRead + Unpin>> {
+        match self {
+            Self::StdIn => Ok(Self::create_input_reader_stdin()),
+            Self::Path(path, true) => Self::create_input_reader_file(path).await,
+            Self::StdOut | Self::Path(_, false) => Err(io::Error::other(
+                "Can not create an input reader from an output stream identifier!",
+            )),
+        }
+    }
 
-/// Returns "stdout" if that is denoted,
-/// `file: '<FILE-NAME>'` otherwise.
-/// This might be useful for logging.
-pub fn create_output_writer_description<P: AsRef<Path>>(ident: Option<P>) -> Cow<'static, str> {
-    create_stream_ident_description(ident, "stdout")
+    /// Creates a reader from a string identifier.
+    /// Both `None` and `Some("-")` mean stdin.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::io;
+    /// # use std::path::Path;
+    /// # use std::path::PathBuf;
+    /// # use std::str::FromStr;
+    /// use cli_utils_hoijui::StreamIdent;
+    ///
+    /// # #[cfg(not(feature = "async"))]
+    /// # fn create_input_reader_example() -> io::Result<()> {
+    ///
+    /// let in_stream_ident = StreamIdent::from_path_buf_opt(None, true); // reads from stdin
+    /// let mut reader = in_stream_ident.create_input_reader()?;
+    ///
+    /// let in_stream_ident = StreamIdent::from_path_opt::<Path>(None, true); // reads from stdin
+    /// let mut reader = in_stream_ident.create_input_reader()?;
+    ///
+    /// let in_stream_ident = StreamIdent::from_path_buf_opt(Some("-".into()), true); // reads from stdin
+    /// let mut reader = in_stream_ident.create_input_reader()?;
+    ///
+    /// let in_stream_ident = StreamIdent::from_path_buf_opt(Some("my_dir/my_file.txt".into()), true); // reads from file "$CWD/my_dir/my_file.txt"
+    /// let mut reader = in_stream_ident.create_input_reader()?;
+    ///
+    /// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
+    /// let in_stream_ident = StreamIdent::from_path_opt(Some(path_buf.as_path()), true); // reads from file "$CWD/my_dir/my_file.txt"
+    /// let mut reader = in_stream_ident.create_input_reader()?;
+    ///
+    /// let in_stream_ident = StreamIdent::from_path_buf_opt(Some(path_buf), true); // reads from file "$CWD/my_dir/my_file.txt"
+    /// let mut reader = in_stream_ident.create_input_reader()?;
+    ///
+    /// let mut buffer = String::new();
+    /// loop {
+    ///     let line_size = reader.read_line(&mut buffer)?;
+    ///     if line_size == 0 {
+    ///         break;
+    ///     }
+    ///     print!("{}", buffer);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// - if a file path is specified, and it is not possible to read from it
+    /// - if this method is called on an output stream specifier
+    #[cfg(not(feature = "async"))]
+    pub fn create_input_reader(&self) -> io::Result<Box<dyn BufRead>> {
+        match self {
+            Self::StdIn => Ok(Self::create_input_reader_stdin()),
+            Self::Path(path, true) => Self::create_input_reader_file(path),
+            Self::StdOut | Self::Path(_, false) => Err(io::Error::other(
+                "Can not create an input reader from an output stream identifier!",
+            )),
+        }
+    }
+
+    /// Creates a reader from a file-path.
+    /// See [`create_input_reader`].
+    ///
+    /// # Errors
+    ///
+    /// If a file path is specified, and it is not possible to read from it.
+    #[cfg(feature = "async")]
+    pub async fn create_input_reader_file<P: AsRef<Path> + ?Sized + Send + Sync>(
+        file_path: &P,
+    ) -> io::Result<Box<dyn BufRead + Unpin>> {
+        let file = File::open(file_path).await?;
+        Ok(Box::new(BufReader::new(file)))
+    }
+
+    /// Creates a reader from a file-path.
+    /// See [`create_input_reader`].
+    ///
+    /// # Errors
+    ///
+    /// If a file path is specified, and it is not possible to read from it.
+    #[cfg(not(feature = "async"))]
+    pub fn create_input_reader_file<P: AsRef<Path> + ?Sized + Send + Sync>(
+        file_path: &P,
+    ) -> io::Result<Box<dyn BufRead>> {
+        let file = File::open(file_path)?;
+        Ok(Box::new(BufReader::new(file)))
+    }
+
+    /// Creates a reader that reads from stdin.
+    /// See [`create_input_reader`].
+    #[must_use]
+    #[cfg(feature = "async")]
+    pub fn create_input_reader_stdin() -> Box<dyn BufRead + Unpin> {
+        Box::new(BufReader::new(io::stdin()))
+    }
+
+    /// Creates a reader that reads from stdin.
+    /// See [`create_input_reader`].
+    #[must_use]
+    #[cfg(not(feature = "async"))]
+    pub fn create_input_reader_stdin() -> Box<dyn BufRead> {
+        Box::new(BufReader::new(io::stdin()))
+    }
+
+    /// Creates a writer from a string identifier.
+    /// Both `None` and `Some("-")` mean stdout.
+    /// See also: [`write_to_file`]
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::io;
+    /// # use async_std::path::Path;
+    /// # use async_std::path::PathBuf;
+    /// # use std::str::FromStr;
+    /// use cli_utils_hoijui::StreamIdent;
+    /// # #[cfg(feature = "async")]
+    /// use async_std::io::WriteExt;
+    ///
+    /// # #[cfg(feature = "async")]
+    /// # async fn create_output_writer_example() -> io::Result<()> {
+    /// let lines = vec!["line 1", "line 2", "line 3"];
+    ///
+    /// let out_stream_ident = StreamIdent::from_path_buf_opt(None, false); // writes to stdout
+    /// let mut writer = out_stream_ident.create_output_writer().await?;
+    ///
+    /// let out_stream_ident = StreamIdent::from_path_opt::<Path>(None, false); // writes to stdout
+    /// let mut writer = out_stream_ident.create_output_writer().await?;
+    ///
+    /// let out_stream_ident = StreamIdent::from_path_buf_opt(Some("-".into()), false); // writes to stdout
+    /// let mut writer = out_stream_ident.create_output_writer().await?;
+    ///
+    /// let out_stream_ident = StreamIdent::from_path_buf_opt(Some("my_dir/my_file.txt".into()), false); // writes to file "$CWD/my_dir/my_file.txt"
+    /// let mut writer = out_stream_ident.create_output_writer().await?;
+    ///
+    /// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
+    /// let out_stream_ident = StreamIdent::from_path_opt(Some(path_buf.as_path()), false); // writes to file "$CWD/my_dir/my_file.txt"
+    /// let mut writer = out_stream_ident.create_output_writer().await?;
+    ///
+    /// let out_stream_ident = StreamIdent::from_path_buf_opt(Some(path_buf), false); // writes to file "$CWD/my_dir/my_file.txt"
+    /// let mut writer = out_stream_ident.create_output_writer().await?;
+    ///
+    /// for line in lines {
+    ///     writer.write_all(line.as_bytes()).await?;
+    ///     writer.write_all(b"\n").await?;
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// - if a file path is specified, and it is not possible to write to it
+    /// - if this method is called on an input stream specifier
+    #[cfg(feature = "async")]
+    pub async fn create_output_writer(&self) -> io::Result<Box<dyn Write + Unpin + Send + Sync>> {
+        match self {
+            Self::StdOut => Ok(Self::create_output_writer_stdout()),
+            Self::Path(path, false) => Self::create_output_writer_file(path).await,
+            Self::StdIn | Self::Path(_, true) => Err(io::Error::other(
+                "Can not create an output writer from an input stream identifier!",
+            )),
+        }
+    }
+
+    /// Creates a writer from a string identifier.
+    /// Both `None` and `Some("-")` mean stdout.
+    /// See also: [`write_to_file`]
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use std::io;
+    /// # use std::path::Path;
+    /// # use std::path::PathBuf;
+    /// # use std::str::FromStr;
+    /// use cli_utils_hoijui::StreamIdent;
+    /// # #[cfg(feature = "async")]
+    /// use async_std::io::WriteExt;
+    ///
+    /// # #[cfg(not(feature = "async"))]
+    /// # fn create_output_writer_example() -> io::Result<()> {
+    /// let lines = vec!["line 1", "line 2", "line 3"];
+    ///
+    /// let out_stream_ident = StreamIdent::from_path_buf_opt(None, false); // writes to stdout
+    /// let mut writer = out_stream_ident.create_output_writer()?;
+    ///
+    /// let out_stream_ident = StreamIdent::from_path_opt::<Path>(None, false); // writes to stdout
+    /// let mut writer = out_stream_ident.create_output_writer()?;
+    ///
+    /// let out_stream_ident = StreamIdent::from_path_buf_opt(Some("-".into()), false); // writes to stdout
+    /// let mut writer = out_stream_ident.create_output_writer()?;
+    ///
+    /// let out_stream_ident = StreamIdent::from_path_buf_opt(Some("my_dir/my_file.txt".into()), false); // writes to file "$CWD/my_dir/my_file.txt"
+    /// let mut writer = out_stream_ident.create_output_writer()?;
+    ///
+    /// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
+    /// let out_stream_ident = StreamIdent::from_path_opt(Some(path_buf.as_path()), false); // writes to file "$CWD/my_dir/my_file.txt"
+    /// let mut writer = out_stream_ident.create_output_writer()?;
+    ///
+    /// let out_stream_ident = StreamIdent::from_path_buf_opt(Some(path_buf), false); // writes to file "$CWD/my_dir/my_file.txt"
+    /// let mut writer = out_stream_ident.create_output_writer()?;
+    ///
+    /// for line in lines {
+    ///     writer.write_all(line.as_bytes())?;
+    ///     writer.write_all(b"\n")?;
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// - if a file path is specified, and it is not possible to write to it
+    /// - if this method is called on an input stream specifier
+    #[cfg(not(feature = "async"))]
+    pub fn create_output_writer(&self) -> io::Result<Box<dyn Write>> {
+        match self {
+            Self::StdOut => Ok(Self::create_output_writer_stdout()),
+            Self::Path(path, false) => Self::create_output_writer_file(path),
+            Self::StdIn | Self::Path(_, true) => Err(io::Error::other(
+                "Can not create an output writer from an input stream identifier!",
+            )),
+        }
+    }
+
+    /// Creates a writer that writes to a file.
+    /// See [`create_output_writer`].
+    ///
+    /// # Errors
+    ///
+    /// If a file path is specified, and it is not possible to write to it.
+    #[cfg(feature = "async")]
+    pub async fn create_output_writer_file<P: AsRef<Path> + ?Sized + Send + Sync>(
+        file_path: &P,
+    ) -> io::Result<Box<dyn Write + Unpin + Send + Sync>> {
+        let file = File::open(file_path).await?;
+        Ok(Box::new(file) as Box<dyn Write + Unpin + Send + Sync>)
+    }
+
+    /// Creates a writer that writes to a file.
+    /// See [`create_output_writer`].
+    ///
+    /// # Errors
+    ///
+    /// If a file path is specified, and it is not possible to write to it.
+    #[cfg(not(feature = "async"))]
+    pub fn create_output_writer_file<P: AsRef<Path> + ?Sized + Send + Sync>(
+        file_path: &P,
+    ) -> io::Result<Box<dyn Write>> {
+        let file = File::create(file_path)?;
+        Ok(Box::new(file) as Box<dyn Write>)
+    }
+
+    /// Creates a writer that writes to stdout.
+    /// See [`create_output_writer`].
+    #[cfg(feature = "async")]
+    #[must_use]
+    pub fn create_output_writer_stdout() -> Box<dyn Write + Unpin + Send + Sync> {
+        Box::new(io::stdout())
+    }
+    #[cfg(not(feature = "async"))]
+    #[must_use]
+    pub fn create_output_writer_stdout() -> Box<dyn Write> {
+        Box::new(io::stdout())
+    }
 }
 
 /// Removes an EOL indicator from the end of the given string,
@@ -511,29 +563,21 @@ pub fn lines_iterator(
 ///
 /// ```rust
 /// # use std::io;
-/// # use std::path::PathBuf;
+/// # use async_std::path::Path;
+/// # use async_std::path::PathBuf;
 /// # use std::str::FromStr;
+/// use cli_utils_hoijui::StreamIdent;
 /// use cli_utils_hoijui::write_to_file;
 ///
 /// # #[cfg(feature = "async")]
 /// # async fn write_to_file_example() -> io::Result<()> {
 /// let lines = vec!["line 1", "line 2", "line 3"];
 ///
-/// let out_file = None as Option<&str>; // writes to stdout
-/// write_to_file(&lines, out_file).await?;
+/// let out_stream_ident = StreamIdent::StdOut; // writes to stdout
+/// write_to_file(&lines, &out_stream_ident).await?;
 ///
-/// let out_file = Some("-"); // writes to stdout
-/// write_to_file(&lines, out_file).await?;
-///
-/// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
-/// write_to_file(&lines, out_file).await?;
-///
-/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
-/// let out_file = Some(path_buf.as_path()); // writes to file "$CWD/my_dir/my_file.txt"
-/// write_to_file(&lines, out_file).await?;
-///
-/// let out_file = Some(path_buf); // writes to file "$CWD/my_dir/my_file.txt"
-/// write_to_file(&lines, out_file).await?;
+/// let out_stream_ident = StreamIdent::Path(PathBuf::from("my_dir/my_file.txt"), false); // writes to file "$CWD/my_dir/my_file.txt"
+/// write_to_file(&lines, &out_stream_ident).await?;
 /// # Ok(())
 /// # }
 /// ```
@@ -542,11 +586,11 @@ pub fn lines_iterator(
 ///
 /// If writing to `destination` failed.
 #[cfg(feature = "async")]
-pub async fn write_to_file<L: AsRef<str> + Send + Sync, P: AsRef<Path> + Send + Sync>(
+pub async fn write_to_file<L: AsRef<str> + Send + Sync>(
     lines: impl IntoIterator<Item = L>,
-    destination: Option<P>,
+    destination: &StreamIdent,
 ) -> io::Result<()> {
-    let writer = create_output_writer(destination).await?;
+    let writer = destination.create_output_writer().await?;
 
     let mut writer_pinned = Box::into_pin(writer);
     for line in lines {
@@ -567,27 +611,18 @@ pub async fn write_to_file<L: AsRef<str> + Send + Sync, P: AsRef<Path> + Send + 
 /// # use std::io;
 /// # use std::path::PathBuf;
 /// # use std::str::FromStr;
+/// use cli_utils_hoijui::StreamIdent;
 /// use cli_utils_hoijui::write_to_file;
 ///
 /// # #[cfg(not(feature = "async"))]
 /// # fn write_to_file_example() -> io::Result<()> {
 /// let lines = vec!["line 1", "line 2", "line 3"];
 ///
-/// let out_file = None as Option<&str>; // writes to stdout
-/// write_to_file(&lines, out_file)?;
+/// let out_stream_ident = StreamIdent::StdOut; // writes to stdout
+/// write_to_file(&lines, &out_stream_ident)?;
 ///
-/// let out_file = Some("-"); // writes to stdout
-/// write_to_file(&lines, out_file)?;
-///
-/// let out_file = Some("my_dir/my_file.txt"); // writes to file "$CWD/my_dir/my_file.txt"
-/// write_to_file(&lines, out_file)?;
-///
-/// let path_buf = PathBuf::from_str("my_dir/my_file.txt").expect("This failing should be impossible!");
-/// let out_file = Some(path_buf.as_path()); // writes to file "$CWD/my_dir/my_file.txt"
-/// write_to_file(&lines, out_file)?;
-///
-/// let out_file = Some(path_buf); // writes to file "$CWD/my_dir/my_file.txt"
-/// write_to_file(&lines, out_file)?;
+/// let out_stream_ident = StreamIdent::Path(PathBuf::from("my_dir/my_file.txt"), false); // writes to file "$CWD/my_dir/my_file.txt"
+/// write_to_file(&lines, &out_stream_ident)?;
 /// # Ok(())
 /// # }
 /// ```
@@ -596,11 +631,11 @@ pub async fn write_to_file<L: AsRef<str> + Send + Sync, P: AsRef<Path> + Send + 
 ///
 /// If writing to `destination` failed.
 #[cfg(not(feature = "async"))]
-pub fn write_to_file<L: AsRef<str>, P: AsRef<Path>>(
+pub fn write_to_file<L: AsRef<str>>(
     lines: impl IntoIterator<Item = L>,
-    destination: Option<P>,
+    destination: &StreamIdent,
 ) -> io::Result<()> {
-    let mut writer = create_output_writer(destination)?;
+    let mut writer = destination.create_output_writer()?;
 
     for line in lines {
         writer.write_all(line.as_ref().as_bytes())?;
@@ -644,11 +679,11 @@ mod tests {
             input: "my lines text\n",
             expected: "my lines text",
         },
-        test_remove_eol_simple_crnl: {
+        test_remove_eol_simple_cr_nl: {
             input: "my lines text\r\n",
             expected: "my lines text",
         },
-        test_remove_eol_simple_nlcr: {
+        test_remove_eol_simple_nl_cr: {
             input: "my lines text\n\r",
             expected: "my lines text\n\r",
         },
@@ -658,46 +693,106 @@ mod tests {
         },
     }
 
-    #[test]
-    fn test_ident_to_path() {
-        assert_eq!(ident_to_path::<&str>(None), None);
-        assert_eq!(ident_to_path::<String>(None), None);
-        assert_eq!(ident_to_path::<PathBuf>(None), None);
-        assert_eq!(ident_to_path::<&Path>(None), None);
-        assert_eq!(ident_to_path(Some(STREAM_PATH_STR)), None);
-        assert_eq!(ident_to_path(Some("-")), None);
-        assert_eq!(ident_to_path(Some("-".to_string())), None);
-        assert_eq!(ident_to_path(Some(PathBuf::from("-"))), None);
-        assert_eq!(ident_to_path(Some(PathBuf::from("-").as_path())), None);
-        assert_eq!(ident_to_path(Some("/pth/x")), Some("/pth/x"));
-        assert_eq!(
-            ident_to_path(Some("/pth/x".to_string())),
-            Some("/pth/x".to_string())
-        );
-        assert_eq!(
-            ident_to_path(Some(PathBuf::from("/pth/x"))),
-            Some(PathBuf::from("/pth/x"))
-        );
-        assert_eq!(
-            ident_to_path(Some(PathBuf::from("/pth/x").as_path())),
-            Some(PathBuf::from("/pth/x").as_path())
-        );
+    fn stream_ident_from_path_opt_in_check(input: Option<&Path>, r#in: bool, expected_path: bool) {
+        let expected = if expected_path {
+            StreamIdent::Path(PathBuf::from(input.unwrap()), r#in)
+        } else {
+            StreamIdent::new_std(r#in)
+        };
+        let actual = StreamIdent::from_path_opt(input, r#in);
+        assert_eq!(actual, expected);
     }
 
-    #[test]
-    fn test_denotes_std_stream() {
-        assert!(denotes_std_stream::<&str>(None));
-        assert!(denotes_std_stream::<String>(None));
-        assert!(denotes_std_stream::<PathBuf>(None));
-        assert!(denotes_std_stream::<&Path>(None));
-        assert!(denotes_std_stream(Some("-")));
-        assert!(denotes_std_stream(Some("-".to_string())));
-        assert!(denotes_std_stream(Some(PathBuf::from("-"))));
-        assert!(denotes_std_stream(Some(PathBuf::from("-").as_path())));
-        assert!(!denotes_std_stream(Some("/pth/x")));
-        assert!(!denotes_std_stream(Some("/pth/x".to_string())));
-        assert!(!denotes_std_stream(Some(PathBuf::from("/pth/x"))));
-        assert!(!denotes_std_stream(Some(PathBuf::from("/pth/x").as_path())));
+    fn stream_ident_from_path_opt_check(input: Option<&Path>, expected_path: bool) {
+        stream_ident_from_path_opt_in_check(input, false, expected_path);
+        stream_ident_from_path_opt_in_check(input, true, expected_path);
+    }
+
+    macro_rules! stream_ident_from_path_opt {
+        ($($name:ident: { input: $input:expr, expected_path: $expected_path:expr, },)*) => {
+        $(
+            #[test]
+            fn $name() {
+                stream_ident_from_path_opt_check($input, $expected_path);
+            }
+        )*
+        }
+    }
+
+    stream_ident_from_path_opt! {
+        stream_ident_from_path_opt_none: {
+            input: None,
+            expected_path: false,
+        },
+        stream_ident_from_path_opt_std_const: {
+            input: Some(STREAM_PATH.as_path()),
+            expected_path: false,
+        },
+        stream_ident_from_path_opt_std_str_const: {
+            input: Some(PathBuf::from(STREAM_PATH_STR).as_path()),
+            expected_path: false,
+        },
+        stream_ident_from_path_opt_std_str_lit: {
+            input: Some(PathBuf::from("-").as_path()),
+            expected_path: false,
+        },
+        stream_ident_from_path_opt_path: {
+            input: Some(PathBuf::from("/pth/x").as_path()),
+            expected_path: true,
+        },
+    }
+
+    fn stream_ident_from_path_buf_opt_in_check(
+        input: Option<PathBuf>,
+        r#in: bool,
+        expected_path: bool,
+    ) {
+        let expected = if expected_path {
+            StreamIdent::Path(input.clone().unwrap(), r#in)
+        } else {
+            StreamIdent::new_std(r#in)
+        };
+        let actual = StreamIdent::from_path_buf_opt(input, r#in);
+        assert_eq!(actual, expected);
+    }
+
+    fn stream_ident_from_path_buf_opt_check(input: Option<PathBuf>, expected_path: bool) {
+        stream_ident_from_path_buf_opt_in_check(input.clone(), false, expected_path);
+        stream_ident_from_path_buf_opt_in_check(input, true, expected_path);
+    }
+
+    macro_rules! stream_ident_from_path_buf_opt {
+        ($($name:ident: { input: $input:expr, expected_path: $expected_path:expr, },)*) => {
+        $(
+            #[test]
+            fn $name() {
+                stream_ident_from_path_buf_opt_check($input, $expected_path);
+            }
+        )*
+        }
+    }
+
+    stream_ident_from_path_buf_opt! {
+        stream_ident_from_path_buf_opt_none: {
+            input: None,
+            expected_path: false,
+        },
+        stream_ident_from_path_buf_opt_std_const: {
+            input: Some(STREAM_PATH.clone()),
+            expected_path: false,
+        },
+        stream_ident_from_path_buf_opt_std_str_const: {
+            input: Some(PathBuf::from(STREAM_PATH_STR)),
+            expected_path: false,
+        },
+        stream_ident_from_path_buf_opt_std_str_lit: {
+            input: Some(PathBuf::from("-")),
+            expected_path: false,
+        },
+        stream_ident_from_path_buf_opt_path: {
+            input: Some(PathBuf::from("/pth/x")),
+            expected_path: true,
+        },
     }
 
     #[cfg(feature = "async")]
