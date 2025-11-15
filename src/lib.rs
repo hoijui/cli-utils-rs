@@ -6,9 +6,9 @@
 pub mod logging;
 #[cfg(feature = "std_error")]
 pub mod std_error;
-mod tools;
+mod std_streams;
 
-pub use tools::*;
+pub use std_streams::*;
 
 /// This serves as a general purpose, catch-all error type.
 ///
