@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2021 - 2024 Robin Vobruba <hoijui.quaero@gmail.com>
+// SPDX-FileCopyrightText: 2021 - 2025 Robin Vobruba <hoijui.quaero@gmail.com>
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -12,7 +12,6 @@ pub enum Error {
     #[error("Represents a `Option::None` value as an error.")]
     None,
 
-    /// A required properties value could not be evaluated
     #[error(r#"The file name ends in "..", and does therefore not represent a file/directory/valid path."#)]
     PathNotAFile,
 
