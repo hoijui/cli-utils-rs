@@ -45,11 +45,17 @@ multiple_crate_versions = { level = "allow", priority = 1 }
 
 [dependencies]
 async-std = { version = "1.13", optional = true }
+async-walkdir = { version = "2.1", default-features = false, optional = true }
+futures = { version = "0.3", default-features = false, optional = true }
 log = { version = "0.4", default-features = false, optional = true }
+regex = { version = "1.12", default-features = false, optional = true }
+serde = { version = "1.0", default-features = false, features = ["std", "derive"], optional = true }
+serde_regex = { version = "1.1", default-features = false, optional = true }
 thiserror = { version = "2.0", default-features = false, optional = true }
 tracing = { version = "0.1", default-features = false, optional = true }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"], optional = true }
 url = { version = "2.5", default-features = false, optional = true }
+wildmatch = { version = "2.5", default-features = false, features = [ "serde" ], optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.48", default-features = false, features = ["rt", "macros"] }
