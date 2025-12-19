@@ -80,3 +80,7 @@ async = ["dep:async-std"]
 
 # Support/Implement serde (serialization framework)
 serde = ["dep:serde", "dep:serde_regex"]
+
+# Provide a convenience struct to be used for include paths provided as CLI args,
+# plus functions for their application.
+ignore_path = ["dep:regex", "dep:thiserror", "dep:wildmatch"]

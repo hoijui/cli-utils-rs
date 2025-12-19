@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#[cfg(feature = "ignore_path")]
+pub mod ignore_path;
 #[cfg(feature = "logging")]
 pub mod logging;
 #[cfg(all(feature = "async", feature = "serde"))]
