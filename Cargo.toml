@@ -77,3 +77,6 @@ url_parse_error = ["std_error", "dep:url"]
 
 # Use async_std instead of std
 async = ["dep:async-std"]
+
+# Support/Implement serde (serialization framework)
+serde = ["dep:serde", "dep:serde_regex"]

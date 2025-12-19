@@ -4,6 +4,8 @@
 
 #[cfg(feature = "logging")]
 pub mod logging;
+#[cfg(all(feature = "async", feature = "serde"))]
+pub mod path_buf;
 #[cfg(feature = "std_error")]
 pub mod std_error;
 mod std_streams;
