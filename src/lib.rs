@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#[cfg(feature = "file_traversal")]
+pub mod file_traversal;
 #[cfg(feature = "ignore_path")]
 pub mod ignore_path;
 #[cfg(feature = "logging")]
