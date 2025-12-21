@@ -2,23 +2,31 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
+#[cfg(all(feature = "async", feature = "serde"))]
+use crate::path_buf::PathBuf;
+#[cfg(all(feature = "async", not(feature = "serde")))]
+use async_std::path::PathBuf;
+#[cfg(not(feature = "async"))]
+use std::path::PathBuf;
 #[cfg(feature = "async")]
 use {
     async_std::fs::File,
     async_std::io::BufReadExt,
     async_std::io::{self, BufRead, BufReader, Write, WriteExt},
-    async_std::path::{Path, PathBuf},
+    async_std::path::Path,
     async_std::stream::Stream,
 };
 #[cfg(not(feature = "async"))]
 use {
     std::fs::File,
     std::io::{self, BufRead, BufReader, Write},
-    std::path::{Path, PathBuf},
+    std::path::Path,
 };
 
 pub const STREAM_PATH_STR: &str = "-";
@@ -30,6 +38,7 @@ pub static STREAM_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
 /// Denotes/identifies/specifies a stream,
 /// either stdin, stdout, or a file-path.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum StreamIdent {
     /// Denotes the standard input-stream.
     StdIn,
@@ -48,39 +57,26 @@ impl StreamIdent {
         if r#in { Self::StdIn } else { Self::StdOut }
     }
 
+    #[must_use]
     pub fn from_path_opt<P: AsRef<Path> + ?Sized + Unpin + Send + Sync>(
         ident: Option<&P>,
         r#in: bool,
     ) -> Self {
-        if let Some(file_path) = ident
-            && file_path.as_ref() != STREAM_PATH.as_path()
-        {
-            return Self::Path(PathBuf::from(file_path.as_ref()), r#in);
-        }
-        Self::new_std(r#in)
+        Self::from((ident, r#in))
     }
 
+    #[must_use]
     pub fn from_path_buf_opt(ident: Option<PathBuf>, r#in: bool) -> Self {
-        if let Some(file_path) = ident
-            && file_path.as_path() != STREAM_PATH.as_path()
-        {
-            return Self::Path(file_path, r#in);
-        }
-        Self::new_std(r#in)
+        Self::from((ident, r#in))
     }
 
     pub fn from_path<P: AsRef<Path> + ?Sized + Unpin + Send + Sync>(ident: &P, r#in: bool) -> Self {
-        if ident.as_ref() != STREAM_PATH.as_path() {
-            return Self::Path(PathBuf::from(ident.as_ref()), r#in);
-        }
-        Self::new_std(r#in)
+        Self::from((ident, r#in))
     }
 
+    #[must_use]
     pub fn from_path_buf(ident: PathBuf, r#in: bool) -> Self {
-        if ident.as_path() != STREAM_PATH.as_path() {
-            return Self::Path(ident, r#in);
-        }
-        Self::new_std(r#in)
+        Self::from((ident, r#in))
     }
 
     /// Returns a human oriented description of the identified stream.
@@ -139,7 +135,7 @@ impl StreamIdent {
     /// let in_stream_ident = StreamIdent::from_path_opt(Some(path_buf.as_path()), true); // reads from file "$CWD/my_dir/my_file.txt"
     /// let mut reader = in_stream_ident.create_input_reader().await?;
     ///
-    /// let in_stream_ident = StreamIdent::from_path_buf_opt(Some(path_buf), true); // reads from file "$CWD/my_dir/my_file.txt"
+    /// let in_stream_ident = StreamIdent::from_path_buf_opt(Some(path_buf.into()), true); // reads from file "$CWD/my_dir/my_file.txt"
     /// let mut reader = in_stream_ident.create_input_reader().await?;
     ///
     /// let mut buffer = String::new();
@@ -309,7 +305,7 @@ impl StreamIdent {
     /// let out_stream_ident = StreamIdent::from_path_opt(Some(path_buf.as_path()), false); // writes to file "$CWD/my_dir/my_file.txt"
     /// let mut writer = out_stream_ident.create_output_writer().await?;
     ///
-    /// let out_stream_ident = StreamIdent::from_path_buf_opt(Some(path_buf), false); // writes to file "$CWD/my_dir/my_file.txt"
+    /// let out_stream_ident = StreamIdent::from_path_buf_opt(Some(path_buf.into()), false); // writes to file "$CWD/my_dir/my_file.txt"
     /// let mut writer = out_stream_ident.create_output_writer().await?;
     ///
     /// for line in lines {
@@ -435,6 +431,51 @@ impl StreamIdent {
     #[must_use]
     pub fn create_output_writer_stdout() -> Box<dyn Write> {
         Box::new(io::stdout())
+    }
+}
+
+impl<P: AsRef<Path> + ?Sized + Unpin + Send + Sync> From<(Option<&P>, bool)> for StreamIdent {
+    fn from((ident, r#in): (Option<&P>, bool)) -> Self {
+        if let Some(file_path) = ident {
+            return Self::from((file_path, r#in));
+        }
+        Self::new_std(r#in)
+    }
+}
+
+impl From<(Option<PathBuf>, bool)> for StreamIdent {
+    fn from((ident, r#in): (Option<PathBuf>, bool)) -> Self {
+        if let Some(file_path) = ident {
+            return Self::from((file_path, r#in));
+        }
+        Self::new_std(r#in)
+    }
+}
+
+// impl<PB: Into<PathBuf>> From<(Option<PB>, bool)> for StreamIdent {
+//     fn from((ident, r#in): (Option<PathBuf>, bool)) -> Self {
+//         if let Some(file_path) = ident {
+//             return Self::from((file_path, r#in));
+//         }
+//         Self::new_std(r#in)
+//     }
+// }
+
+impl<P: AsRef<Path> + ?Sized + Unpin + Send + Sync> From<(&P, bool)> for StreamIdent {
+    fn from((ident, r#in): (&P, bool)) -> Self {
+        if ident.as_ref() != STREAM_PATH.as_path() {
+            return Self::Path(PathBuf::from(ident.as_ref()), r#in);
+        }
+        Self::new_std(r#in)
+    }
+}
+
+impl From<(PathBuf, bool)> for StreamIdent {
+    fn from((ident, r#in): (PathBuf, bool)) -> Self {
+        if ident.as_path() != STREAM_PATH.as_path() {
+            return Self::Path(ident, r#in);
+        }
+        Self::new_std(r#in)
     }
 }
 
@@ -576,7 +617,7 @@ pub fn lines_iterator(
 /// let out_stream_ident = StreamIdent::StdOut; // writes to stdout
 /// write_to_file(&lines, &out_stream_ident).await?;
 ///
-/// let out_stream_ident = StreamIdent::Path(PathBuf::from("my_dir/my_file.txt"), false); // writes to file "$CWD/my_dir/my_file.txt"
+/// let out_stream_ident = StreamIdent::Path(PathBuf::from("my_dir/my_file.txt").into(), false); // writes to file "$CWD/my_dir/my_file.txt"
 /// write_to_file(&lines, &out_stream_ident).await?;
 /// # Ok(())
 /// # }
