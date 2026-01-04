@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022-2025 Robin Vobruba <hoijui.quaero@gmail.com>
+# SPDX-FileCopyrightText: 2022-2026 Robin Vobruba <hoijui.quaero@gmail.com>
 #
 # SPDX-License-Identifier: Unlicense
 
@@ -58,7 +58,7 @@ url = { version = "2.5", default-features = false, optional = true }
 wildmatch = { version = "2.5", default-features = false, features = [ "serde" ], optional = true }
 
 [dev-dependencies]
-tokio = { version = "1.48", default-features = false, features = ["rt", "macros"] }
+tokio = { version = "1.49", default-features = false, features = ["rt", "macros"] }
 
 [features]
 default = []
