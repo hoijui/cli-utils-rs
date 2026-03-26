@@ -58,7 +58,7 @@ url = { version = "2.5", default-features = false, optional = true }
 wildmatch = { version = "2.5", default-features = false, features = [ "serde" ], optional = true }
 
 [dev-dependencies]
-tokio = { version = "1.49", default-features = false, features = ["rt", "macros"] }
+tokio = { version = "1.50", default-features = false, features = ["rt", "macros"] }
 
 [features]
 default = []
