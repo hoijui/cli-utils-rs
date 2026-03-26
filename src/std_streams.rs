@@ -227,7 +227,7 @@ impl StreamIdent {
     }
 
     /// Creates a reader from a file-path.
-    /// See [`create_input_reader`].
+    /// See [`Self::create_input_reader`].
     ///
     /// # Errors
     ///
@@ -255,7 +255,7 @@ impl StreamIdent {
     }
 
     /// Creates a reader that reads from stdin.
-    /// See [`create_input_reader`].
+    /// See [`Self::create_input_reader`].
     #[must_use]
     #[cfg(feature = "async")]
     pub fn create_input_reader_stdin() -> Box<dyn BufRead + Unpin> {
@@ -263,7 +263,7 @@ impl StreamIdent {
     }
 
     /// Creates a reader that reads from stdin.
-    /// See [`create_input_reader`].
+    /// See [`Self::create_input_reader`].
     #[must_use]
     #[cfg(not(feature = "async"))]
     pub fn create_input_reader_stdin() -> Box<dyn BufRead> {
@@ -333,7 +333,7 @@ impl StreamIdent {
 
     /// Creates a writer from a string identifier.
     /// Both `None` and `Some("-")` mean stdout.
-    /// See also: [`write_to_file`]
+    /// See also: [`Self::write_to_file`]
     ///
     /// # Example
     ///
@@ -393,7 +393,7 @@ impl StreamIdent {
     }
 
     /// Creates a writer that writes to a file.
-    /// See [`create_output_writer`].
+    /// See [`Self::create_output_writer`].
     ///
     /// # Errors
     ///
@@ -407,7 +407,7 @@ impl StreamIdent {
     }
 
     /// Creates a writer that writes to a file.
-    /// See [`create_output_writer`].
+    /// See [`Self::create_output_writer`].
     ///
     /// # Errors
     ///
@@ -421,7 +421,7 @@ impl StreamIdent {
     }
 
     /// Creates a writer that writes to stdout.
-    /// See [`create_output_writer`].
+    /// See [`Self::create_output_writer`].
     #[cfg(feature = "async")]
     #[must_use]
     pub fn create_output_writer_stdout() -> Box<dyn Write + Unpin + Send + Sync> {
@@ -598,7 +598,7 @@ pub fn lines_iterator(
 
 /// Writes a list of strings to a file;
 /// one per line.
-/// See also: [`create_output_writer`]
+/// See also: [`StreamIdent::create_output_writer`]
 ///
 /// # Example
 ///
