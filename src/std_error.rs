@@ -6,7 +6,7 @@ use crate::BoxError;
 use thiserror::Error;
 
 /// This serves to wrap/represent `std::**()` and `Option` return values as `Result`s,
-/// like the one of [`std::fs::PathBuf::file_name()`], or [`std::OsStr::to_str()`].
+/// like the one of [`std::path::Path::file_name()`], or [`std::ffi::OsStr::to_str()`].
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Represents a `Option::None` value as an error.")]
