@@ -38,7 +38,7 @@ pub enum Error {
 }
 
 /// Searches for markup source files according to the configuration,
-/// and stores them in `result`.
+/// and stores them in `collector`.
 ///
 /// # Errors
 ///
@@ -71,7 +71,7 @@ pub async fn scan<F: Fn(&Path) -> PathFilterRet + Send + Sync, C: AsyncFnMut(Pat
     Ok(())
 }
 
-/// Stores a single file in `result`,
+/// Stores a single file in `collector`,
 /// if it is accessible
 /// and a markup source file according to the configuration.
 ///
@@ -95,7 +95,7 @@ pub async fn add<F: Fn(&Path) -> PathFilterRet + Send + Sync, C: AsyncFnMut(Path
 }
 
 /// Searches for markup source files according to the configuration,
-/// and stores them in `result`.
+/// and returns them as a vector.
 ///
 /// # Errors
 ///
