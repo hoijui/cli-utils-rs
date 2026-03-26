@@ -85,10 +85,10 @@ impl StreamIdent {
     ///
     /// This returns:
     ///
-    /// - "file-system stream (in|out): '<FILE-NAME>'" if self identifies a path
+    /// - `"file-system stream (in|out): '<FILE-NAME>'"` if self identifies a path
     /// - otherwise:
-    ///   - "stdin" if `self.in` is `true`
-    ///   - "stdout" if it is `false`
+    ///   - `"stdin"` if `self.in` is `true`
+    ///   - `"stdout"` if it is `false`
     #[must_use]
     pub fn description(&self) -> Cow<'static, str> {
         match self {
