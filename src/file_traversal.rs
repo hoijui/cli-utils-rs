@@ -40,6 +40,12 @@ pub enum Error {
 /// Searches for markup source files according to the configuration,
 /// and stores them in `collector`.
 ///
+/// # Arguments
+///
+/// - `root` - The directory to search in
+/// - `filter` - A function that decides for each file if it should be collected
+/// - `collector` - A function that receives result paths
+///
 /// # Errors
 ///
 /// If any of the (markup) files supplied or found through scanning supplied dirs
@@ -75,6 +81,12 @@ pub async fn scan<F: Fn(&Path) -> PathFilterRet + Send + Sync, C: AsyncFnMut(Pat
 /// if it is accessible
 /// and a markup source file according to the configuration.
 ///
+/// # Arguments
+///
+/// - `filter` - A function that decides for a file if it should be collected
+/// - `file` - The file to collect, potentially
+/// - `collector` - A function that receives result paths
+///
 /// # Errors
 ///
 /// If the supplied `file` has no name (e.g. '.').
@@ -96,6 +108,11 @@ pub async fn add<F: Fn(&Path) -> PathFilterRet + Send + Sync, C: AsyncFnMut(Path
 
 /// Searches for markup source files according to the configuration,
 /// and returns them as a vector.
+///
+/// # Arguments
+///
+/// - `root` - The directory to search in
+/// - `filter` - A function that decides for each file if it should be collected
 ///
 /// # Errors
 ///
