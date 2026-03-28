@@ -130,3 +130,29 @@ pub async fn find<F: Fn(&Path) -> PathFilterRet + Send + Sync>(
     scan(root, &filter, &mut collector).await?;
     Ok(result)
 }
+
+/// Searches for markup source files according to the configuration,
+/// and returns them as a vector, with the root path stripped from them.
+///
+/// See also [`find`].
+///
+/// # Arguments
+///
+/// - `root` - The directory to search in
+/// - `filter` - A function that decides for each file if it should be collected
+///
+/// # Errors
+///
+/// If `root` or any of the (markup) files found through scanning `root`
+/// has no name (e.g. '.').
+/// The code-logic should prevent this from ever happening.
+pub async fn find_root_stripped<F: Fn(&Path) -> PathFilterRet + Send + Sync>(
+    root: &Path,
+    filter: &F,
+) -> Result<Vec<PathBuf>, Error> {
+    let mut result = vec![];
+    let mut collector =
+        async |file: PathBuf| result.push(file.strip_prefix(root).unwrap_or(file.as_path()).into());
+    scan(root, &filter, &mut collector).await?;
+    Ok(result)
+}
