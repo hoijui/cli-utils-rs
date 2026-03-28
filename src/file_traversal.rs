@@ -48,7 +48,7 @@ pub enum Error {
 ///
 /// # Errors
 ///
-/// If any of the (markup) files supplied or found through scanning supplied dirs
+/// If `root` or any of the (markup) files found through scanning `root`
 /// has no name (e.g. '.').
 /// The code-logic should prevent this from ever happening.
 pub async fn scan<F: Fn(&Path) -> PathFilterRet + Send + Sync, C: AsyncFnMut(PathBuf)>(
@@ -109,6 +109,8 @@ pub async fn add<F: Fn(&Path) -> PathFilterRet + Send + Sync, C: AsyncFnMut(Path
 /// Searches for markup source files according to the configuration,
 /// and returns them as a vector.
 ///
+/// See also [`find_root_stripped`].
+///
 /// # Arguments
 ///
 /// - `root` - The directory to search in
@@ -116,9 +118,9 @@ pub async fn add<F: Fn(&Path) -> PathFilterRet + Send + Sync, C: AsyncFnMut(Path
 ///
 /// # Errors
 ///
-/// If a file or path supplied does not exist,
-/// or if any file supplied or found through scanning has no name (e.g. '.').
-/// The code-logic should prevent the second case from ever happening.
+/// If `root` or any of the (markup) files found through scanning `root`
+/// has no name (e.g. '.').
+/// The code-logic should prevent this from ever happening.
 pub async fn find<F: Fn(&Path) -> PathFilterRet + Send + Sync>(
     root: &Path,
     filter: &F,
